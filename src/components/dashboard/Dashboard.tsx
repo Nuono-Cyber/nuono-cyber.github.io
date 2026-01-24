@@ -6,6 +6,7 @@ import { EngagementTab } from './tabs/EngagementTab';
 import { TemporalTab } from './tabs/TemporalTab';
 import { ContentTab } from './tabs/ContentTab';
 import { InsightsTab } from './tabs/InsightsTab';
+import { ChatBot } from './ChatBot';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -137,6 +138,9 @@ export function Dashboard() {
           <p>Dashboard de Analytics • Dados processados com análise avançada</p>
         </div>
       </footer>
+
+      {/* ChatBot */}
+      <ChatBot posts={posts} summary={summary} />
     </div>
   );
 }
