@@ -1,6 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useInstagramData } from '@/hooks/useInstagramData';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { OverviewTab } from './tabs/OverviewTab';
 import { EngagementTab } from './tabs/EngagementTab';
 import { TemporalTab } from './tabs/TemporalTab';
@@ -14,12 +24,29 @@ import {
   FileVideo, 
   Lightbulb,
   Instagram,
-  Loader2
+  Loader2,
+  User,
+  LogOut,
+  Shield,
+  Settings
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { posts, isLoading, error, summary } = useInstagramData();
+  const { user, isSuperAdmin, signOut } = useAuthContext();
   const [activeTab, setActiveTab] = useState('overview');
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Erro ao sair');
+    } else {
+      toast.success('Até logo!');
+      navigate('/auth');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -58,12 +85,47 @@ export function Dashboard() {
                 <p className="text-sm text-muted-foreground">@{posts[0]?.username || 'nadsongl'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{posts.length} posts analisados</span>
-              <span className="hidden md:inline">•</span>
-              <span className="hidden md:inline">
-                {posts.length > 0 && `${posts[posts.length - 1]?.publishedAt.toLocaleDateString('pt-BR')} - ${posts[0]?.publishedAt.toLocaleDateString('pt-BR')}`}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{posts.length} posts analisados</span>
+                <span>•</span>
+                <span>
+                  {posts.length > 0 && `${posts[posts.length - 1]?.publishedAt.toLocaleDateString('pt-BR')} - ${posts[0]?.publishedAt.toLocaleDateString('pt-BR')}`}
+                </span>
+              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <User className="h-5 w-5" />
+                    {isSuperAdmin && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isSuperAdmin ? 'Super Administrador' : 'Usuário'}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  {isSuperAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Painel Admin
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
