@@ -27,6 +27,8 @@ const personalEmailSchema = z.string().email('Email pessoal inválido');
 
 const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracteres');
 
+const inviteCodeSchema = z.string().length(10, 'Código deve ter 10 caracteres').regex(/^[a-f0-9]+$/, 'Código deve conter apenas números e letras a-f');
+
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,27 +40,16 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [personalEmail, setPersonalEmail] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState<string | null>(null);
   
   // Reset password dialog
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetPersonalEmail, setResetPersonalEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
-
-  // Check for invite token
-  useEffect(() => {
-    const token = searchParams.get('invite');
-    if (token) {
-      setActiveTab('signup');
-      setInviteToken(token);
-      validateInvite(token);
-    }
-  }, [searchParams]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -68,28 +59,25 @@ export default function Auth() {
     }
   }, [user, navigate, location]);
 
-  const validateInvite = async (token: string) => {
+  const validateInviteCode = async (code: string) => {
     try {
       const { data, error } = await supabase
         .from('invites')
         .select('*')
-        .eq('token', token)
+        .eq('code', code.toLowerCase())
         .is('used_at', null)
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
       if (error || !data) {
-        setError('Convite inválido ou expirado');
-        setInviteToken(null);
-        return;
+        setError('Código inválido, expirado ou já utilizado');
+        return false;
       }
 
-      if (data.email) {
-        setInviteEmail(data.email);
-        setEmail(data.email);
-      }
+      return true;
     } catch (err) {
-      setError('Erro ao validar convite');
+      setError('Erro ao validar código');
+      return false;
     }
   };
 
@@ -142,12 +130,22 @@ export default function Auth() {
         return;
       }
 
-      // Check invite requirement for non-super admin emails
+      // Check invite code requirement for non-super admin emails
       const isSuperAdminEmail = ['gabrielnbn@nadenterprise.com', 'nadsongl@nadenterprise.com'].includes(email);
-      if (!isSuperAdminEmail && !inviteToken) {
-        setError('É necessário um convite para se cadastrar');
-        setIsLoading(false);
-        return;
+      if (!isSuperAdminEmail) {
+        // Validate invite code for regular users
+        const codeResult = inviteCodeSchema.safeParse(inviteCode);
+        if (!codeResult.success) {
+          setError('Código de convite inválido');
+          setIsLoading(false);
+          return;
+        }
+
+        const isCodeValid = await validateInviteCode(inviteCode);
+        if (!isCodeValid) {
+          setIsLoading(false);
+          return;
+        }
       }
 
       const redirectUrl = `${window.location.origin}/`;
@@ -174,12 +172,12 @@ export default function Auth() {
         return;
       }
 
-      // Mark invite as used
-      if (inviteToken) {
+      // Mark invite code as used
+      if (!isSuperAdminEmail && inviteCode) {
         await supabase
           .from('invites')
           .update({ used_at: new Date().toISOString() })
-          .eq('token', inviteToken);
+          .eq('code', inviteCode.toLowerCase());
       }
 
       setSuccess('Conta criada com sucesso! Você será redirecionado...');
@@ -274,13 +272,10 @@ export default function Auth() {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>
-              {inviteToken ? 'Complete seu Cadastro' : 'Acesse sua conta'}
+              {'Complete seu Cadastro'}
             </CardTitle>
             <CardDescription>
-              {inviteToken 
-                ? 'Você foi convidado para acessar o sistema' 
-                : 'Entre com suas credenciais para continuar'
-              }
+              {'Crie uma conta com o código de convite'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -390,11 +385,26 @@ export default function Auth() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
-                        disabled={!!inviteEmail}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Apenas emails @nadenterprise.com são permitidos
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-invite-code">Código de Convite</Label>
+                    <Input
+                      id="signup-invite-code"
+                      type="text"
+                      placeholder="0123456789"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toLowerCase())}
+                      className="uppercase font-mono"
+                      maxLength={10}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Código hexadecimal fornecido pelo administrador
                     </p>
                   </div>
 
@@ -448,11 +458,11 @@ export default function Auth() {
                     )}
                   </Button>
 
-                  {!inviteToken && (
+                  {
                     <p className="text-sm text-center text-muted-foreground">
-                      Precisa de acesso? Solicite um convite ao administrador.
+                      Precisa de um código? Solicite ao administrador.
                     </p>
-                  )}
+                  }
                 </form>
               </TabsContent>
             </Tabs>
