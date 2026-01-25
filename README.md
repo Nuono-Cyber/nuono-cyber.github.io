@@ -50,6 +50,40 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## Gerenciamento de Dados do Instagram
+
+Este projeto suporta upload de dados do Instagram através de arquivos CSV e XLSX.
+
+### Dependências Necessárias
+
+Para suporte completo a arquivos XLSX, instale as dependências adicionais:
+
+```sh
+npm install xlsx @types/xlsx
+```
+
+### Como Usar
+
+1. **Super Admin**: Acesse a aba "Gerenciar Dados" no dashboard
+2. **Upload CSV**: Adiciona novos dados aos existentes (incremental)
+3. **Upload XLSX**: Substitui completamente os dados existentes
+
+### Formato dos Arquivos
+
+Os arquivos devem conter as seguintes colunas principais:
+- `Horário de publicação`
+- `Descrição`
+- `Visualizações`
+- `Alcance`
+- `Curtidas`
+- `Comentários`
+- `Compartilhamentos`
+- `Salvamentos`
+- `Seguimentos`
+- `Duração (s)`
+- `Tipo de post`
+- `Link permanente`
+
 ## What technologies are used for this project?
 
 This project is built with:

@@ -7,6 +7,10 @@ interface CSVRow {
   [key: string]: string;
 }
 
+interface XLSXRow {
+  [key: string]: any;
+}
+
 export function parseCSVData(csvText: string): InstagramPost[] {
   const result: ParseResult<CSVRow> = Papa.parse<CSVRow>(csvText, {
     header: true,
@@ -14,6 +18,60 @@ export function parseCSVData(csvText: string): InstagramPost[] {
   });
 
   return result.data.map((row: CSVRow, index: number) => {
+    const publishedAt = parseDate(row['Horário de publicação']);
+    const description = row['Descrição'] || '';
+    const views = parseNumber(row['Visualizações']);
+    const reach = parseNumber(row['Alcance']);
+    const likes = parseNumber(row['Curtidas']);
+    const comments = parseNumber(row['Comentários']);
+    const shares = parseNumber(row['Compartilhamentos']);
+    const saves = parseNumber(row['Salvamentos']);
+    const follows = parseNumber(row['Seguimentos']);
+    const duration = parseNumber(row['Duração (s)']);
+
+    const engagementTotal = likes + comments + shares + saves;
+    const engagementRate = reach > 0 ? (engagementTotal / reach) * 100 : 0;
+    const reachRate = views > 0 ? (reach / views) * 100 : 0;
+
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]/gu;
+    const emojis = description.match(emojiRegex) || [];
+    const hashtags = description.match(/#\w+/g) || [];
+
+    return {
+      id: row['Identificação do post'] || `post-${index}`,
+      accountId: row['Identificação da conta'] || '',
+      username: row['Nome de usuário da conta'] || '',
+      accountName: row['Nome da conta'] || '',
+      description,
+      duration,
+      publishedAt,
+      permalink: row['Link permanente'] || '',
+      postType: row['Tipo de post'] || 'Reel do Instagram',
+      views,
+      reach,
+      likes,
+      shares,
+      follows,
+      comments,
+      saves,
+      engagementRate,
+      engagementTotal,
+      reachRate,
+      dayOfWeek: publishedAt.getDay(),
+      dayName: DAY_NAMES[publishedAt.getDay()],
+      hour: publishedAt.getHours(),
+      period: getPeriod(publishedAt.getHours()),
+      weekNumber: getWeekNumber(publishedAt),
+      descriptionLength: description.length,
+      hasEmoji: emojis.length > 0,
+      emojiCount: emojis.length,
+      hashtagCount: hashtags.length,
+    };
+  }).filter((post): post is InstagramPost => post.publishedAt instanceof Date && !isNaN(post.publishedAt.getTime()));
+}
+
+export function parseXLSXData(xlsxData: XLSXRow[]): InstagramPost[] {
+  return xlsxData.map((row: XLSXRow, index: number) => {
     const publishedAt = parseDate(row['Horário de publicação']);
     const description = row['Descrição'] || '';
     const views = parseNumber(row['Visualizações']);

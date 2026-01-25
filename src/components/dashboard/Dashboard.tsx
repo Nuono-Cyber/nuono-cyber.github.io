@@ -17,6 +17,7 @@ import { TemporalTab } from './tabs/TemporalTab';
 import { ContentTab } from './tabs/ContentTab';
 import { InsightsTab } from './tabs/InsightsTab';
 import { ChatBot } from './ChatBot';
+import { DataUpload } from './DataUpload';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -34,7 +35,7 @@ import { toast } from 'sonner';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { posts, isLoading, error, summary } = useInstagramData();
+  const { posts, isLoading, error, summary, addUploadedData } = useInstagramData();
   const { user, isSuperAdmin, signOut } = useAuthContext();
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -170,6 +171,15 @@ export function Dashboard() {
               <Lightbulb className="w-4 h-4" />
               <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger 
+                value="data" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span className="hidden sm:inline">Gerenciar Dados</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="mt-0">
@@ -191,6 +201,12 @@ export function Dashboard() {
           <TabsContent value="insights" className="mt-0">
             <InsightsTab posts={posts} />
           </TabsContent>
+
+          {isSuperAdmin && (
+            <TabsContent value="data" className="mt-0">
+              <DataUpload onDataUploaded={addUploadedData} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 

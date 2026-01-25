@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
-import { parseCSVData } from '@/utils/dataProcessor';
+import { parseCSVData, parseXLSXData } from '@/utils/dataProcessor';
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
+  const [uploadedPosts, setUploadedPosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,20 +28,41 @@ export function useInstagramData() {
     loadData();
   }, []);
 
-  const summary = useMemo(() => {
-    if (posts.length === 0) return null;
+  const addUploadedData = (type: 'csv' | 'xlsx', data: any[]) => {
+    let newPosts: InstagramPost[] = [];
 
-    const totalViews = posts.reduce((sum, p) => sum + p.views, 0);
-    const totalReach = posts.reduce((sum, p) => sum + p.reach, 0);
-    const totalLikes = posts.reduce((sum, p) => sum + p.likes, 0);
-    const totalComments = posts.reduce((sum, p) => sum + p.comments, 0);
-    const totalShares = posts.reduce((sum, p) => sum + p.shares, 0);
-    const totalSaves = posts.reduce((sum, p) => sum + p.saves, 0);
-    const totalFollows = posts.reduce((sum, p) => sum + p.follows, 0);
-    const avgEngagement = posts.reduce((sum, p) => sum + p.engagementRate, 0) / posts.length;
+    if (type === 'csv') {
+      // Para CSV, parseia como CSV e adiciona aos dados existentes
+      const csvText = Papa.unparse(data); // Converte de volta para CSV
+      newPosts = parseCSVData(csvText);
+      setUploadedPosts(prev => [...prev, ...newPosts]);
+    } else if (type === 'xlsx') {
+      // Para XLSX, substitui todos os dados
+      newPosts = parseXLSXData(data);
+      setPosts(newPosts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()));
+      setUploadedPosts([]); // Limpa uploads anteriores
+    }
+  };
+
+  // Combina posts originais com uploads incrementais
+  const allPosts = useMemo(() => {
+    return [...posts, ...uploadedPosts].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+  }, [posts, uploadedPosts]);
+
+  const summary = useMemo(() => {
+    if (allPosts.length === 0) return null;
+
+    const totalViews = allPosts.reduce((sum, p) => sum + p.views, 0);
+    const totalReach = allPosts.reduce((sum, p) => sum + p.reach, 0);
+    const totalLikes = allPosts.reduce((sum, p) => sum + p.likes, 0);
+    const totalComments = allPosts.reduce((sum, p) => sum + p.comments, 0);
+    const totalShares = allPosts.reduce((sum, p) => sum + p.shares, 0);
+    const totalSaves = allPosts.reduce((sum, p) => sum + p.saves, 0);
+    const totalFollows = allPosts.reduce((sum, p) => sum + p.follows, 0);
+    const avgEngagement = allPosts.reduce((sum, p) => sum + p.engagementRate, 0) / allPosts.length;
 
     return {
-      totalPosts: posts.length,
+      totalPosts: allPosts.length,
       totalViews,
       totalReach,
       totalLikes,
@@ -48,12 +70,12 @@ export function useInstagramData() {
       totalShares,
       totalSaves,
       totalFollows,
-      avgViews: totalViews / posts.length,
-      avgReach: totalReach / posts.length,
-      avgLikes: totalLikes / posts.length,
+      avgViews: totalViews / allPosts.length,
+      avgReach: totalReach / allPosts.length,
+      avgLikes: totalLikes / allPosts.length,
       avgEngagement,
     };
-  }, [posts]);
+  }, [allPosts]);
 
-  return { posts, isLoading, error, summary };
+  return { posts: allPosts, isLoading, error, summary, addUploadedData };
 }
