@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/utils/activityLogger';
 
 export type UserRole = 'super_admin' | 'admin' | 'user';
 
@@ -98,6 +99,9 @@ export function useAuth() {
       email,
       password,
     });
+    if (!error) {
+      await logActivity('login', { email });
+    }
     return { error };
   };
 
@@ -123,6 +127,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    await logActivity('logout');
     const { error } = await supabase.auth.signOut();
     return { error };
   };

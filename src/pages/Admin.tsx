@@ -200,20 +200,26 @@ export default function Admin() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500">
-                <Shield className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">Painel Administrativo</h1>
+                  <p className="text-sm text-muted-foreground">Gerenciar usuários e convites</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold">Painel Administrativo</h1>
-                <p className="text-sm text-muted-foreground">Gerenciar usuários e convites</p>
+              <div className="ml-auto">
+                <Button variant="outline" onClick={() => window.open('https://supabase.com/dashboard/project/hafwvsiwsuhiazboivyb/sql', '_blank')}>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Aplicar Migration
+                </Button>
               </div>
             </div>
-          </div>
         </div>
       </header>
 

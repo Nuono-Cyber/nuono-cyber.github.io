@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData, parseXLSXData } from '@/utils/dataProcessor';
 import Papa from 'papaparse';
+import { logActivity } from '@/utils/activityLogger';
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
@@ -37,12 +38,23 @@ export function useInstagramData() {
       // Convertemos para o formato esperado pelo parseCSVData
       const csvText = Papa.unparse(data);
       newPosts = parseCSVData(csvText);
-      setUploadedPosts(prev => [...prev, ...newPosts]);
+      
+      // Mescla com posts existentes: atualiza se ID existe, adiciona se não
+      setUploadedPosts(prev => {
+        const existingMap = new Map(prev.map(p => [p.id, p]));
+        newPosts.forEach(newPost => {
+          existingMap.set(newPost.id, newPost);
+        });
+        const merged = Array.from(existingMap.values()).sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+        logActivity('upload_csv', { recordsCount: newPosts.length, totalRecords: merged.length });
+        return merged;
+      });
     } else if (type === 'xlsx') {
       // Para XLSX, os dados vêm do XLSX.utils.sheet_to_json
       newPosts = parseXLSXData(data);
       setPosts(newPosts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()));
       setUploadedPosts([]); // Limpa uploads anteriores
+      logActivity('upload_xlsx', { recordsCount: newPosts.length });
     }
   };
 
