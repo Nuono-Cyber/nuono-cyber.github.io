@@ -39,7 +39,6 @@ export function DataUpload({ onDataUploaded }: DataUploadProps) {
         data = result.data;
       } else if (type === 'xlsx') {
         // Process XLSX - will replace existing data
-        // Note: Requires 'xlsx' package to be installed: npm install xlsx @types/xlsx
         const XLSX = await import('xlsx');
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });

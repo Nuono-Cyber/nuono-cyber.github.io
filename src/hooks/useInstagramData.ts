@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData, parseXLSXData } from '@/utils/dataProcessor';
+import Papa from 'papaparse';
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
@@ -32,12 +33,13 @@ export function useInstagramData() {
     let newPosts: InstagramPost[] = [];
 
     if (type === 'csv') {
-      // Para CSV, parseia como CSV e adiciona aos dados existentes
-      const csvText = Papa.unparse(data); // Converte de volta para CSV
+      // Para CSV, os dados já vêm parseados do Papa.parse
+      // Convertemos para o formato esperado pelo parseCSVData
+      const csvText = Papa.unparse(data);
       newPosts = parseCSVData(csvText);
       setUploadedPosts(prev => [...prev, ...newPosts]);
     } else if (type === 'xlsx') {
-      // Para XLSX, substitui todos os dados
+      // Para XLSX, os dados vêm do XLSX.utils.sheet_to_json
       newPosts = parseXLSXData(data);
       setPosts(newPosts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()));
       setUploadedPosts([]); // Limpa uploads anteriores

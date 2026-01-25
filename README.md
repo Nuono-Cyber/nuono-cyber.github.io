@@ -54,10 +54,21 @@ npm run dev
 
 Este projeto suporta upload de dados do Instagram através de arquivos CSV e XLSX.
 
+### Status Atual
+
+- ✅ **CSV (Incremental)**: Totalmente funcional
+- ✅ **XLSX (Substituição)**: Funcional (dependências instaladas)
+
 ### Dependências Necessárias
 
-Para suporte completo a arquivos XLSX, instale as dependências adicionais:
+Para suporte completo a arquivos XLSX, execute o script de instalação:
 
+```sh
+chmod +x install-xlsx.sh
+./install-xlsx.sh
+```
+
+Ou instale manualmente:
 ```sh
 npm install xlsx @types/xlsx
 ```
@@ -66,7 +77,7 @@ npm install xlsx @types/xlsx
 
 1. **Super Admin**: Acesse a aba "Gerenciar Dados" no dashboard
 2. **Upload CSV**: Adiciona novos dados aos existentes (incremental)
-3. **Upload XLSX**: Substitui completamente os dados existentes
+3. **Upload XLSX**: Substitui completamente os dados existentes (após instalar dependências)
 
 ### Formato dos Arquivos
 
