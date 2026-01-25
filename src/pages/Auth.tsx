@@ -7,6 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Instagram, Loader2, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
@@ -16,23 +23,32 @@ const emailSchema = z.string().email('Email inválido').refine(
   'Apenas emails @nadenterprise.com são permitidos'
 );
 
+const personalEmailSchema = z.string().email('Email pessoal inválido');
+
 const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracteres');
 
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, signIn, signUp, resetPassword } = useAuthContext();
+  const { user, signIn } = useAuthContext();
   
   const [activeTab, setActiveTab] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [personalEmail, setPersonalEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);
+  
+  // Reset password dialog
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetPersonalEmail, setResetPersonalEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Check for invite token
   useEffect(() => {
@@ -112,6 +128,13 @@ export default function Auth() {
         return;
       }
 
+      const personalEmailResult = personalEmailSchema.safeParse(personalEmail);
+      if (!personalEmailResult.success) {
+        setError(personalEmailResult.error.errors[0].message);
+        setIsLoading(false);
+        return;
+      }
+
       const passwordResult = passwordSchema.safeParse(password);
       if (!passwordResult.success) {
         setError(passwordResult.error.errors[0].message);
@@ -127,7 +150,20 @@ export default function Auth() {
         return;
       }
 
-      const { error } = await signUp(email, password, fullName);
+      const redirectUrl = `${window.location.origin}/`;
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+            personal_email: personalEmail,
+          },
+        },
+      });
+
       if (error) {
         if (error.message.includes('already registered')) {
           setError('Este email já está cadastrado');
@@ -157,27 +193,71 @@ export default function Auth() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
+    setIsResetting(true);
 
     try {
-      const emailResult = emailSchema.safeParse(email);
+      // Validate inputs
+      const emailResult = emailSchema.safeParse(resetEmail);
       if (!emailResult.success) {
         setError(emailResult.error.errors[0].message);
-        setIsLoading(false);
+        setIsResetting(false);
         return;
       }
 
-      const { error } = await resetPassword(email);
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess('Link de recuperação enviado para seu email');
+      const personalEmailResult = personalEmailSchema.safeParse(resetPersonalEmail);
+      if (!personalEmailResult.success) {
+        setError(personalEmailResult.error.errors[0].message);
+        setIsResetting(false);
+        return;
       }
+
+      // Verify that the personal email matches the one in the profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('personal_email, user_id')
+        .eq('email', resetEmail)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        setError('Email corporativo não encontrado');
+        setIsResetting(false);
+        return;
+      }
+
+      if (profile.personal_email !== resetPersonalEmail) {
+        setError('Email pessoal não corresponde ao cadastrado');
+        setIsResetting(false);
+        return;
+      }
+
+      // Generate a password reset token and send via edge function
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: {
+          corporateEmail: resetEmail,
+          personalEmail: resetPersonalEmail,
+          redirectUrl: `${window.location.origin}/auth/reset-password`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setShowResetDialog(false);
+      setResetEmail('');
+      setResetPersonalEmail('');
+      setSuccess('Link de recuperação enviado para seu email pessoal!');
     } catch (err: any) {
       setError(err.message || 'Erro ao enviar link de recuperação');
     } finally {
-      setIsLoading(false);
+      setIsResetting(false);
     }
+  };
+
+  const openResetDialog = () => {
+    setError(null);
+    setResetEmail(email);
+    setShowResetDialog(true);
   };
 
   return (
@@ -227,13 +307,13 @@ export default function Auth() {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email">Email Corporativo</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="login-email"
                         type="email"
-                        placeholder="seu.email@nadenterprise.com"
+                        placeholder="seu.nome@nadenterprise.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
@@ -273,8 +353,7 @@ export default function Auth() {
                     type="button"
                     variant="link"
                     className="w-full"
-                    onClick={handleResetPassword}
-                    disabled={isLoading || !email}
+                    onClick={openResetDialog}
                   >
                     Esqueci minha senha
                   </Button>
@@ -294,18 +373,19 @@ export default function Auth() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className="pl-10"
+                        required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">Email Corporativo</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-email"
                         type="email"
-                        placeholder="seu.email@nadenterprise.com"
+                        placeholder="seu.nome@nadenterprise.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
@@ -315,6 +395,25 @@ export default function Auth() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Apenas emails @nadenterprise.com são permitidos
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-personal-email">Email Pessoal</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-personal-email"
+                        type="email"
+                        placeholder="seu.email@gmail.com"
+                        value={personalEmail}
+                        onChange={(e) => setPersonalEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Para receber links de recuperação de senha
                     </p>
                   </div>
 
@@ -360,6 +459,82 @@ export default function Auth() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>
+              Informe seu email corporativo e pessoal para receber o link de recuperação
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email Corporativo</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="seu.nome@nadenterprise.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-personal-email">Email Pessoal</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="reset-personal-email"
+                  type="email"
+                  placeholder="seu.email@gmail.com"
+                  value={resetPersonalEmail}
+                  onChange={(e) => setResetPersonalEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O link será enviado para este email
+              </p>
+            </div>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowResetDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={isResetting}>
+                {isResetting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar Link'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
