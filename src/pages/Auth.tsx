@@ -59,11 +59,11 @@ export default function Auth() {
     }
   }, [user, navigate, location]);
 
-  const validateInviteCode = async (code: string) => {
+  const validateInviteCode = async (code: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase
         .from('invites')
-        .select('*')
+        .select('id, code, used_at, expires_at')
         .eq('code', code.toLowerCase())
         .is('used_at', null)
         .gt('expires_at', new Date().toISOString())
