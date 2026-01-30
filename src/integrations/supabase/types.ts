@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       invites: {
         Row: {
+          code: string | null
           created_at: string
           email: string | null
           expires_at: string
@@ -25,6 +26,7 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          code?: string | null
           created_at?: string
           email?: string | null
           expires_at?: string
@@ -34,6 +36,7 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          code?: string | null
           created_at?: string
           email?: string | null
           expires_at?: string
