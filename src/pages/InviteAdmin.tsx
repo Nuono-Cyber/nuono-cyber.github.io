@@ -13,11 +13,13 @@ import { generateHexCode, formatHexCode } from '@/utils/inviteCodeGenerator';
 
 interface InviteRecord {
   id: string;
-  code: string;
-  email?: string;
+  code: string | null;
+  token: string;
+  email: string | null;
   created_at: string;
   expires_at: string;
-  used_at?: string;
+  used_at: string | null;
+  invited_by: string | null;
 }
 
 export default function InviteAdmin() {
@@ -49,7 +51,7 @@ export default function InviteAdmin() {
 
       if (fetchError) throw fetchError;
 
-      setInvites((data || []) as InviteRecord[]);
+      setInvites((data || []) as unknown as InviteRecord[]);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar convites');
     } finally {
@@ -226,7 +228,7 @@ export default function InviteAdmin() {
                         }
                       >
                         <TableCell className="font-mono font-bold">
-                          {formatHexCode(invite.code)}
+                          {invite.code ? formatHexCode(invite.code) : '-'}
                         </TableCell>
                         <TableCell>{invite.email || '-'}</TableCell>
                         <TableCell>
@@ -258,8 +260,8 @@ export default function InviteAdmin() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => copyToClipboard(invite.code)}
-                              disabled={isCodeUsed(invite) || isCodeExpired(invite)}
+                              onClick={() => invite.code && copyToClipboard(invite.code)}
+                              disabled={isCodeUsed(invite) || isCodeExpired(invite) || !invite.code}
                             >
                               {copiedCode === invite.code ? (
                                 <CheckCircle className="h-4 w-4" />

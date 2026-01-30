@@ -16,8 +16,13 @@ import { EngagementTab } from './tabs/EngagementTab';
 import { TemporalTab } from './tabs/TemporalTab';
 import { ContentTab } from './tabs/ContentTab';
 import { InsightsTab } from './tabs/InsightsTab';
+import { SentimentTab } from './tabs/SentimentTab';
+import { PredictionTab } from './tabs/PredictionTab';
+import { BenchmarkTab } from './tabs/BenchmarkTab';
+import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -29,7 +34,11 @@ import {
   User,
   LogOut,
   Shield,
-  Settings
+  Heart,
+  TrendingUp,
+  Target,
+  LineChart,
+  Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -95,6 +104,8 @@ export function Dashboard() {
                 </span>
               </div>
               
+              <ThemeSwitcher />
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
@@ -104,7 +115,7 @@ export function Dashboard() {
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-56 glass-card">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium">{user?.email}</p>
                     <p className="text-xs text-muted-foreground">
@@ -117,6 +128,10 @@ export function Dashboard() {
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Shield className="mr-2 h-4 w-4" />
                         Painel Admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/activity')}>
+                        <Activity className="mr-2 h-4 w-4" />
+                        Logs de Atividade
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -135,7 +150,7 @@ export function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-secondary/50 p-1 h-auto flex-wrap justify-start gap-1">
+          <TabsList className="glass-card p-1 h-auto flex-wrap justify-start gap-1">
             <TabsTrigger 
               value="overview" 
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
@@ -155,7 +170,7 @@ export function Dashboard() {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
             >
               <Clock className="w-4 h-4" />
-              <span className="hidden sm:inline">Análise Temporal</span>
+              <span className="hidden sm:inline">Temporal</span>
             </TabsTrigger>
             <TabsTrigger 
               value="content" 
@@ -163,6 +178,34 @@ export function Dashboard() {
             >
               <FileVideo className="w-4 h-4" />
               <span className="hidden sm:inline">Conteúdo</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="sentiment" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <Heart className="w-4 h-4" />
+              <span className="hidden sm:inline">Sentimento</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="prediction" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Previsões</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="benchmark" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <Target className="w-4 h-4" />
+              <span className="hidden sm:inline">Benchmark</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="trends" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <LineChart className="w-4 h-4" />
+              <span className="hidden sm:inline">Tendências</span>
             </TabsTrigger>
             <TabsTrigger 
               value="insights" 
@@ -177,7 +220,7 @@ export function Dashboard() {
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
               >
                 <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Gerenciar Dados</span>
+                <span className="hidden sm:inline">Dados</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -196,6 +239,22 @@ export function Dashboard() {
 
           <TabsContent value="content" className="mt-0">
             <ContentTab posts={posts} />
+          </TabsContent>
+
+          <TabsContent value="sentiment" className="mt-0">
+            <SentimentTab posts={posts} />
+          </TabsContent>
+
+          <TabsContent value="prediction" className="mt-0">
+            <PredictionTab posts={posts} />
+          </TabsContent>
+
+          <TabsContent value="benchmark" className="mt-0">
+            <BenchmarkTab posts={posts} />
+          </TabsContent>
+
+          <TabsContent value="trends" className="mt-0">
+            <TrendsTab posts={posts} />
           </TabsContent>
 
           <TabsContent value="insights" className="mt-0">
