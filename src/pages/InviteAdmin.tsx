@@ -16,6 +16,7 @@ interface InviteRecord {
   code: string | null;
   token: string;
   email: string | null;
+  personal_email: string | null;
   created_at: string;
   expires_at: string;
   used_at: string | null;
@@ -31,6 +32,7 @@ export default function InviteAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [personalEmail, setPersonalEmail] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -73,13 +75,15 @@ export default function InviteAdmin() {
         .insert({
           code: code.toLowerCase(),
           email: email || null,
+          personal_email: personalEmail || null,
           invited_by: user?.id,
         });
 
       if (insertError) throw insertError;
 
-      setSuccess(`Código gerado com sucesso: ${formatHexCode(code)}`);
+      setSuccess(`Código gerado com sucesso: ${formatHexCode(code)}. O código deve ser enviado para o email pessoal: ${personalEmail || 'não informado'}`);
       setEmail('');
+      setPersonalEmail('');
       await loadInvites();
     } catch (err: any) {
       setError(err.message || 'Erro ao gerar código');
@@ -150,7 +154,7 @@ export default function InviteAdmin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="invite-email">Email (Opcional)</Label>
+                <Label htmlFor="invite-email">Email Corporativo (Opcional)</Label>
                 <Input
                   id="invite-email"
                   type="email"
@@ -159,7 +163,22 @@ export default function InviteAdmin() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Se preenchido, este código será vinculado ao email específico
+                  Email @nadenterprise.com que o usuário usará para login
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="invite-personal-email">Email Pessoal</Label>
+                <Input
+                  id="invite-personal-email"
+                  type="email"
+                  placeholder="usuario@gmail.com"
+                  value={personalEmail}
+                  onChange={(e) => setPersonalEmail(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Email onde o código será enviado</strong> (o usuário ainda não tem acesso ao email corporativo)
                 </p>
               </div>
 
@@ -208,7 +227,8 @@ export default function InviteAdmin() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Código</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Email Corporativo</TableHead>
+                      <TableHead>Email Pessoal</TableHead>
                       <TableHead>Criado em</TableHead>
                       <TableHead>Expira em</TableHead>
                       <TableHead>Status</TableHead>
@@ -231,6 +251,7 @@ export default function InviteAdmin() {
                           {invite.code ? formatHexCode(invite.code) : '-'}
                         </TableCell>
                         <TableCell>{invite.email || '-'}</TableCell>
+                        <TableCell className="text-primary font-medium">{invite.personal_email || '-'}</TableCell>
                         <TableCell>
                           {new Date(invite.created_at).toLocaleDateString('pt-BR')}
                         </TableCell>

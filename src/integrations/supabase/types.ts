@@ -46,6 +46,7 @@ export type Database = {
           expires_at: string
           id: string
           invited_by: string | null
+          personal_email: string | null
           token: string
           used_at: string | null
         }
@@ -56,6 +57,7 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string | null
+          personal_email?: string | null
           token?: string
           used_at?: string | null
         }
@@ -66,6 +68,7 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string | null
+          personal_email?: string | null
           token?: string
           used_at?: string | null
         }
