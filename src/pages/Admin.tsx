@@ -35,7 +35,9 @@ import { toast } from 'sonner';
 interface Invite {
   id: string;
   token: string;
+  code: string | null;
   email: string | null;
+  personal_email: string | null;
   used_at: string | null;
   expires_at: string;
   created_at: string;
@@ -55,6 +57,7 @@ export default function Admin() {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [newInviteEmail, setNewInviteEmail] = useState('');
+  const [newInvitePersonalEmail, setNewInvitePersonalEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,13 +120,21 @@ export default function Admin() {
     setError(null);
 
     try {
+      // Validate personal email is required
+      if (!newInvitePersonalEmail) {
+        setError('Email pessoal é obrigatório - é para onde o convite será enviado');
+        setIsCreating(false);
+        return;
+      }
+
       const inviteData: any = {
         invited_by: user?.id,
+        personal_email: newInvitePersonalEmail,
       };
 
       if (withEmail && newInviteEmail) {
         if (!newInviteEmail.endsWith('@nadenterprise.com')) {
-          setError('Apenas emails @nadenterprise.com são permitidos');
+          setError('Email corporativo deve ser @nadenterprise.com');
           setIsCreating(false);
           return;
         }
@@ -140,10 +151,11 @@ export default function Admin() {
 
       setInvites([data, ...invites]);
       setNewInviteEmail('');
+      setNewInvitePersonalEmail('');
       
       const inviteUrl = `${window.location.origin}/auth?invite=${data.token}`;
       await navigator.clipboard.writeText(inviteUrl);
-      toast.success('Convite criado e link copiado para a área de transferência!');
+      toast.success(`Convite criado! Link copiado. Envie para: ${newInvitePersonalEmail}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -245,7 +257,25 @@ export default function Admin() {
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <Label htmlFor="invite-email">Email (opcional)</Label>
+                <Label htmlFor="invite-personal-email">Email Pessoal *</Label>
+                <div className="relative mt-1.5">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="invite-personal-email"
+                    type="email"
+                    placeholder="usuario@gmail.com"
+                    value={newInvitePersonalEmail}
+                    onChange={(e) => setNewInvitePersonalEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  <strong>Email onde o convite será enviado</strong> (o usuário ainda não tem email corporativo)
+                </p>
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="invite-email">Email Corporativo (opcional)</Label>
                 <div className="relative mt-1.5">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -258,7 +288,7 @@ export default function Admin() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Se informado, apenas este email poderá usar o convite
+                  Email @nadenterprise.com que o usuário usará para login
                 </p>
               </div>
             </div>
@@ -266,7 +296,7 @@ export default function Admin() {
             <div className="flex flex-col sm:flex-row gap-2">
               <Button 
                 onClick={() => createInvite(false)} 
-                disabled={isCreating}
+                disabled={isCreating || !newInvitePersonalEmail}
                 variant="outline"
               >
                 {isCreating ? (
@@ -278,14 +308,14 @@ export default function Admin() {
               </Button>
               <Button 
                 onClick={() => createInvite(true)} 
-                disabled={isCreating || !newInviteEmail}
+                disabled={isCreating || !newInvitePersonalEmail}
               >
                 {isCreating ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="mr-2 h-4 w-4" />
                 )}
-                Gerar Link para Email
+                Gerar Convite
               </Button>
             </div>
           </CardContent>
@@ -312,7 +342,8 @@ export default function Admin() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Email Corporativo</TableHead>
+                      <TableHead>Email Pessoal</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Expira em</TableHead>
                       <TableHead>Criado em</TableHead>
@@ -323,7 +354,10 @@ export default function Admin() {
                     {invites.map((invite) => (
                       <TableRow key={invite.id}>
                         <TableCell>
-                          {invite.email || <span className="text-muted-foreground">Genérico</span>}
+                          {invite.email || <span className="text-muted-foreground">Qualquer</span>}
+                        </TableCell>
+                        <TableCell className="text-primary font-medium">
+                          {invite.personal_email || <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>
                           {invite.used_at ? (
