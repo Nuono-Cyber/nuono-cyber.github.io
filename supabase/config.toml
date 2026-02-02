@@ -1,1 +1,10 @@
 project_id = "hafwvsiwsuhiazboivyb"
+
+[functions.instagram-chat]
+verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.meta-sync]
+verify_jwt = false

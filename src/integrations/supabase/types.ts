@@ -74,6 +74,83 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_integration_config: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          instagram_account_id: string
+          last_sync_at: string | null
+          sync_enabled: boolean
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          instagram_account_id: string
+          last_sync_at?: string | null
+          sync_enabled?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          instagram_account_id?: string
+          last_sync_at?: string | null
+          sync_enabled?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meta_sync_logs: {
+        Row: {
+          completed_at: string | null
+          config_id: string
+          error_message: string | null
+          id: string
+          records_fetched: number | null
+          records_updated: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          config_id: string
+          error_message?: string | null
+          id?: string
+          records_fetched?: number | null
+          records_updated?: number | null
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          config_id?: string
+          error_message?: string | null
+          id?: string
+          records_fetched?: number | null
+          records_updated?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_sync_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "meta_integration_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
