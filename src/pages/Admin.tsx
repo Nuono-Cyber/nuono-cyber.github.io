@@ -3,16 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
@@ -21,10 +11,14 @@ import {
   Plus, 
   Trash2, 
   Users,
-  AlertCircle,
   Shield,
   Key,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Hash
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateHexCode, formatHexCode } from '@/utils/inviteCodeGenerator';
@@ -53,7 +47,6 @@ export default function Admin() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -66,7 +59,6 @@ export default function Admin() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch invites
       const { data: invitesData, error: invitesError } = await supabase
         .from('invites')
         .select('id, token, code, used_at, expires_at, created_at')
@@ -75,7 +67,6 @@ export default function Admin() {
       if (invitesError) throw invitesError;
       setInvites(invitesData || []);
 
-      // Fetch users with roles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -83,7 +74,6 @@ export default function Admin() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch roles for each profile
       const usersWithRoles: UserProfile[] = [];
       for (const profile of profilesData || []) {
         const { data: roleData } = await supabase
@@ -102,7 +92,7 @@ export default function Admin() {
       }
       setUsers(usersWithRoles);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -110,11 +100,8 @@ export default function Admin() {
 
   const createInviteCode = async () => {
     setIsCreating(true);
-    setError(null);
-
     try {
       const code = generateHexCode();
-
       const { data, error } = await supabase
         .from('invites')
         .insert({
@@ -127,11 +114,10 @@ export default function Admin() {
       if (error) throw error;
 
       setInvites([data, ...invites]);
-      
       await navigator.clipboard.writeText(formatHexCode(code));
       toast.success(`Código ${formatHexCode(code)} gerado e copiado!`);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setIsCreating(false);
     }
@@ -144,13 +130,8 @@ export default function Admin() {
 
   const deleteInvite = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('invites')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('invites').delete().eq('id', id);
       if (error) throw error;
-
       setInvites(invites.filter(i => i.id !== id));
       toast.success('Código excluído');
     } catch (err: any) {
@@ -162,225 +143,307 @@ export default function Admin() {
     return !invite.used_at && new Date(invite.expires_at) > new Date();
   };
 
-  const getStatusBadge = (invite: Invite) => {
+  const getStatusInfo = (invite: Invite) => {
     if (invite.used_at) {
-      return <Badge variant="secondary">Usado</Badge>;
+      return { label: 'Utilizado', variant: 'secondary' as const, icon: CheckCircle2, color: 'text-muted-foreground' };
     }
     if (new Date(invite.expires_at) <= new Date()) {
-      return <Badge variant="destructive">Expirado</Badge>;
+      return { label: 'Expirado', variant: 'destructive' as const, icon: XCircle, color: 'text-destructive' };
     }
-    return <Badge className="bg-green-500 hover:bg-green-600">Disponível</Badge>;
+    return { label: 'Disponível', variant: 'default' as const, icon: Sparkles, color: 'text-[hsl(var(--success))]' };
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">Super Admin</Badge>;
-      case 'admin':
-        return <Badge variant="default">Admin</Badge>;
-      default:
-        return <Badge variant="secondary">Usuário</Badge>;
-    }
+  const stats = {
+    total: invites.length,
+    available: invites.filter(i => isInviteValid(i)).length,
+    used: invites.filter(i => i.used_at).length,
+    expired: invites.filter(i => !i.used_at && new Date(i.expires_at) <= new Date()).length,
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl instagram-gradient animate-pulse" />
+            <Loader2 className="w-8 h-8 animate-spin text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-muted-foreground">Carregando painel...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Painel Administrativo</h1>
-                <p className="text-sm text-muted-foreground">Gerenciar códigos e usuários</p>
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/')}
+                className="rounded-xl hover:bg-secondary"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl instagram-gradient shadow-lg">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight">Central de Controle</h1>
+                  <p className="text-sm text-muted-foreground">Gerenciamento de acessos</p>
+                </div>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchData}
+              disabled={isLoading}
+              className="gap-2 rounded-xl"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <main className="container mx-auto px-6 py-8 space-y-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Hash className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-2xl font-bold mono-text">{stats.total}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Total de Códigos</p>
+          </div>
+          
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 rounded-lg bg-[hsl(var(--success))]/10">
+                <Sparkles className="w-4 h-4 text-[hsl(var(--success))]" />
+              </div>
+              <span className="text-2xl font-bold mono-text text-[hsl(var(--success))]">{stats.available}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Disponíveis</p>
+          </div>
+          
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 rounded-lg bg-secondary">
+                <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <span className="text-2xl font-bold mono-text">{stats.used}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Utilizados</p>
+          </div>
+          
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <Clock className="w-4 h-4 text-destructive" />
+              </div>
+              <span className="text-2xl font-bold mono-text text-destructive">{stats.expired}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Expirados</p>
+          </div>
+        </div>
 
         {/* Generate Code Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
-              Gerar Código de Convite
-            </CardTitle>
-            <CardDescription>
-              Gere um código hexadecimal único para novos usuários se cadastrarem
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Button 
-                onClick={createInviteCode} 
-                disabled={isCreating}
-                className="gap-2"
-              >
-                {isCreating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                Gerar Novo Código
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={fetchData}
-                disabled={isLoading}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Atualizar
-              </Button>
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
+          <div className="absolute inset-0 instagram-gradient opacity-5" />
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+                <Key className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Gerar Novo Código</h2>
+                <p className="text-sm text-muted-foreground">Crie um código hexadecimal único para novos usuários</p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <Button 
+              onClick={createInviteCode} 
+              disabled={isCreating}
+              className="gap-2 instagram-gradient text-white shadow-lg hover:opacity-90 transition-opacity rounded-xl px-6"
+            >
+              {isCreating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Gerar Código
+            </Button>
+          </div>
+        </div>
 
         {/* Codes List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
-              Códigos Gerados
-            </CardTitle>
-            <CardDescription>
-              {invites.length} código(s) gerado(s)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {invites.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum código gerado ainda
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expira em</TableHead>
-                      <TableHead>Criado em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invites.map((invite) => (
-                      <TableRow key={invite.id}>
-                        <TableCell className="font-mono font-bold text-lg">
-                          {invite.code ? formatHexCode(invite.code) : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(invite)}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(invite.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {invite.code && isInviteValid(invite) && (
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                onClick={() => copyCode(invite.code!)}
-                                title="Copiar código"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {!invite.used_at && (
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => deleteInvite(invite.id)}
-                                title="Excluir código"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="p-6 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-secondary">
+                <Key className="w-4 h-4 text-muted-foreground" />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <div>
+                <h2 className="font-semibold">Códigos de Convite</h2>
+                <p className="text-sm text-muted-foreground">{invites.length} código(s) no sistema</p>
+              </div>
+            </div>
+          </div>
+
+          {invites.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="inline-flex p-4 rounded-2xl bg-secondary mb-4">
+                <Key className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground">Nenhum código gerado ainda</p>
+              <p className="text-sm text-muted-foreground/60 mt-1">Clique em "Gerar Código" para criar o primeiro</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {invites.map((invite) => {
+                const status = getStatusInfo(invite);
+                const StatusIcon = status.icon;
+                
+                return (
+                  <div 
+                    key={invite.id} 
+                    className="p-4 hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className={`p-2.5 rounded-xl ${
+                          status.variant === 'default' ? 'bg-[hsl(var(--success))]/10' : 
+                          status.variant === 'destructive' ? 'bg-destructive/10' : 
+                          'bg-secondary'
+                        }`}>
+                          <StatusIcon className={`w-4 h-4 ${status.color}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-mono font-bold text-lg tracking-wider truncate">
+                            {invite.code ? formatHexCode(invite.code) : '—'}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span>Criado: {new Date(invite.created_at).toLocaleDateString('pt-BR')}</span>
+                            <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                            <span>Expira: {new Date(invite.expires_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={status.variant}
+                          className="rounded-lg px-3"
+                        >
+                          {status.label}
+                        </Badge>
+                        
+                        {invite.code && isInviteValid(invite) && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            onClick={() => copyCode(invite.code!)}
+                            className="rounded-xl h-9 w-9 hover:bg-primary/10 hover:text-primary"
+                            title="Copiar código"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {!invite.used_at && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            className="rounded-xl h-9 w-9 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => deleteInvite(invite.id)}
+                            title="Excluir código"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Users List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Usuários Cadastrados
-            </CardTitle>
-            <CardDescription>
-              {users.length} usuário(s) no sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {users.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum usuário cadastrado ainda
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Função</TableHead>
-                      <TableHead>Cadastrado em</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell>
-                          {u.full_name || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell>{u.email}</TableCell>
-                        <TableCell>{getRoleBadge(u.role)}</TableCell>
-                        <TableCell>
-                          {new Date(u.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="p-6 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-secondary">
+                <Users className="w-4 h-4 text-muted-foreground" />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <div>
+                <h2 className="font-semibold">Usuários do Sistema</h2>
+                <p className="text-sm text-muted-foreground">{users.length} usuário(s) cadastrado(s)</p>
+              </div>
+            </div>
+          </div>
+
+          {users.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="inline-flex p-4 rounded-2xl bg-secondary mb-4">
+                <Users className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground">Nenhum usuário cadastrado ainda</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {users.map((u) => (
+                <div 
+                  key={u.id} 
+                  className="p-4 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/20">
+                        <span className="text-sm font-semibold text-primary">
+                          {(u.full_name || u.email).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {u.full_name || <span className="text-muted-foreground italic">Sem nome</span>}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{u.email}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        className={`rounded-lg px-3 ${
+                          u.role === 'super_admin' 
+                            ? 'instagram-gradient text-white border-0' 
+                            : u.role === 'admin' 
+                              ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' 
+                              : ''
+                        }`}
+                        variant={u.role === 'user' ? 'secondary' : 'default'}
+                      >
+                        {u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Usuário'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
