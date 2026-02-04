@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
@@ -20,24 +18,21 @@ import {
   ArrowLeft, 
   Copy, 
   Loader2, 
-  Mail, 
   Plus, 
-  Send, 
   Trash2, 
   Users,
-  Link as LinkIcon,
-  CheckCircle,
   AlertCircle,
-  Shield
+  Shield,
+  Key,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateHexCode, formatHexCode } from '@/utils/inviteCodeGenerator';
 
 interface Invite {
   id: string;
   token: string;
   code: string | null;
-  email: string | null;
-  personal_email: string | null;
   used_at: string | null;
   expires_at: string;
   created_at: string;
@@ -56,8 +51,6 @@ export default function Admin() {
   const { isSuperAdmin, user } = useAuthContext();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [newInviteEmail, setNewInviteEmail] = useState('');
-  const [newInvitePersonalEmail, setNewInvitePersonalEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +69,7 @@ export default function Admin() {
       // Fetch invites
       const { data: invitesData, error: invitesError } = await supabase
         .from('invites')
-        .select('*')
+        .select('id, token, code, used_at, expires_at, created_at')
         .order('created_at', { ascending: false });
 
       if (invitesError) throw invitesError;
@@ -115,47 +108,28 @@ export default function Admin() {
     }
   };
 
-  const createInvite = async (withEmail: boolean = false) => {
+  const createInviteCode = async () => {
     setIsCreating(true);
     setError(null);
 
     try {
-      // Validate personal email is required
-      if (!newInvitePersonalEmail) {
-        setError('Email pessoal é obrigatório - é para onde o convite será enviado');
-        setIsCreating(false);
-        return;
-      }
-
-      const inviteData: any = {
-        invited_by: user?.id,
-        personal_email: newInvitePersonalEmail,
-      };
-
-      if (withEmail && newInviteEmail) {
-        if (!newInviteEmail.endsWith('@nadenterprise.com')) {
-          setError('Email corporativo deve ser @nadenterprise.com');
-          setIsCreating(false);
-          return;
-        }
-        inviteData.email = newInviteEmail;
-      }
+      const code = generateHexCode();
 
       const { data, error } = await supabase
         .from('invites')
-        .insert(inviteData)
+        .insert({
+          invited_by: user?.id,
+          code: code,
+        })
         .select()
         .single();
 
       if (error) throw error;
 
       setInvites([data, ...invites]);
-      setNewInviteEmail('');
-      setNewInvitePersonalEmail('');
       
-      const inviteUrl = `${window.location.origin}/auth?invite=${data.token}`;
-      await navigator.clipboard.writeText(inviteUrl);
-      toast.success(`Convite criado! Link copiado. Envie para: ${newInvitePersonalEmail}`);
+      await navigator.clipboard.writeText(formatHexCode(code));
+      toast.success(`Código ${formatHexCode(code)} gerado e copiado!`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -163,10 +137,9 @@ export default function Admin() {
     }
   };
 
-  const copyInviteLink = async (token: string) => {
-    const inviteUrl = `${window.location.origin}/auth?invite=${token}`;
-    await navigator.clipboard.writeText(inviteUrl);
-    toast.success('Link copiado!');
+  const copyCode = async (code: string) => {
+    await navigator.clipboard.writeText(formatHexCode(code));
+    toast.success('Código copiado!');
   };
 
   const deleteInvite = async (id: string) => {
@@ -179,7 +152,7 @@ export default function Admin() {
       if (error) throw error;
 
       setInvites(invites.filter(i => i.id !== id));
-      toast.success('Convite excluído');
+      toast.success('Código excluído');
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -187,6 +160,16 @@ export default function Admin() {
 
   const isInviteValid = (invite: Invite) => {
     return !invite.used_at && new Date(invite.expires_at) > new Date();
+  };
+
+  const getStatusBadge = (invite: Invite) => {
+    if (invite.used_at) {
+      return <Badge variant="secondary">Usado</Badge>;
+    }
+    if (new Date(invite.expires_at) <= new Date()) {
+      return <Badge variant="destructive">Expirado</Badge>;
+    }
+    return <Badge className="bg-green-500 hover:bg-green-600">Disponível</Badge>;
   };
 
   const getRoleBadge = (role: string) => {
@@ -212,26 +195,20 @@ export default function Admin() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold">Painel Administrativo</h1>
-                  <p className="text-sm text-muted-foreground">Gerenciar usuários e convites</p>
-                </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500">
+                <Shield className="w-5 h-5 text-white" />
               </div>
-              <div className="ml-auto">
-                <Button variant="outline" onClick={() => window.open('https://supabase.com/dashboard/project/hafwvsiwsuhiazboivyb/sql', '_blank')}>
-                  <Shield className="w-4 h-4 mr-2" />
-                  Aplicar Migration
-                </Button>
+              <div>
+                <h1 className="text-xl font-bold">Painel Administrativo</h1>
+                <p className="text-sm text-muted-foreground">Gerenciar códigos e usuários</p>
               </div>
             </div>
+          </div>
         </div>
       </header>
 
@@ -243,107 +220,66 @@ export default function Admin() {
           </Alert>
         )}
 
-        {/* Create Invite Section */}
+        {/* Generate Code Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Criar Convite
+              <Key className="w-5 h-5" />
+              Gerar Código de Convite
             </CardTitle>
             <CardDescription>
-              Gere um link de convite para novos usuários
+              Gere um código hexadecimal único para novos usuários se cadastrarem
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="invite-personal-email">Email Pessoal *</Label>
-                <div className="relative mt-1.5">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="invite-personal-email"
-                    type="email"
-                    placeholder="usuario@gmail.com"
-                    value={newInvitePersonalEmail}
-                    onChange={(e) => setNewInvitePersonalEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <strong>Email onde o convite será enviado</strong> (o usuário ainda não tem email corporativo)
-                </p>
-              </div>
-              <div className="flex-1">
-                <Label htmlFor="invite-email">Email Corporativo (opcional)</Label>
-                <div className="relative mt-1.5">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    placeholder="usuario@nadenterprise.com"
-                    value={newInviteEmail}
-                    onChange={(e) => setNewInviteEmail(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Email @nadenterprise.com que o usuário usará para login
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
+          <CardContent>
+            <div className="flex gap-2">
               <Button 
-                onClick={() => createInvite(false)} 
-                disabled={isCreating || !newInvitePersonalEmail}
-                variant="outline"
+                onClick={createInviteCode} 
+                disabled={isCreating}
+                className="gap-2"
               >
                 {isCreating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <LinkIcon className="mr-2 h-4 w-4" />
+                  <Plus className="h-4 w-4" />
                 )}
-                Gerar Link Genérico
+                Gerar Novo Código
               </Button>
               <Button 
-                onClick={() => createInvite(true)} 
-                disabled={isCreating || !newInvitePersonalEmail}
+                variant="outline" 
+                onClick={fetchData}
+                disabled={isLoading}
+                className="gap-2"
               >
-                {isCreating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Gerar Convite
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Invites List */}
+        {/* Codes List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <LinkIcon className="w-5 h-5" />
-              Convites Gerados
+              <Key className="w-5 h-5" />
+              Códigos Gerados
             </CardTitle>
             <CardDescription>
-              {invites.length} convite(s) gerado(s)
+              {invites.length} código(s) gerado(s)
             </CardDescription>
           </CardHeader>
           <CardContent>
             {invites.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                Nenhum convite gerado ainda
+                Nenhum código gerado ainda
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email Corporativo</TableHead>
-                      <TableHead>Email Pessoal</TableHead>
+                      <TableHead>Código</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Expira em</TableHead>
                       <TableHead>Criado em</TableHead>
@@ -353,20 +289,11 @@ export default function Admin() {
                   <TableBody>
                     {invites.map((invite) => (
                       <TableRow key={invite.id}>
-                        <TableCell>
-                          {invite.email || <span className="text-muted-foreground">Qualquer</span>}
-                        </TableCell>
-                        <TableCell className="text-primary font-medium">
-                          {invite.personal_email || <span className="text-muted-foreground">—</span>}
+                        <TableCell className="font-mono font-bold text-lg">
+                          {invite.code ? formatHexCode(invite.code) : '—'}
                         </TableCell>
                         <TableCell>
-                          {invite.used_at ? (
-                            <Badge variant="secondary">Usado</Badge>
-                          ) : isInviteValid(invite) ? (
-                            <Badge className="bg-green-500">Válido</Badge>
-                          ) : (
-                            <Badge variant="destructive">Expirado</Badge>
-                          )}
+                          {getStatusBadge(invite)}
                         </TableCell>
                         <TableCell>
                           {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
@@ -376,23 +303,27 @@ export default function Admin() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {isInviteValid(invite) && (
+                            {invite.code && isInviteValid(invite) && (
                               <Button 
                                 size="sm" 
                                 variant="ghost"
-                                onClick={() => copyInviteLink(invite.token)}
+                                onClick={() => copyCode(invite.code!)}
+                                title="Copiar código"
                               >
                                 <Copy className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              className="text-destructive"
-                              onClick={() => deleteInvite(invite.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!invite.used_at && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => deleteInvite(invite.id)}
+                                title="Excluir código"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
