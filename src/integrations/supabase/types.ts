@@ -38,6 +38,72 @@ export type Database = {
         }
         Relationships: []
       }
+      instagram_posts: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          comments: number | null
+          created_at: string
+          description: string | null
+          duration: number | null
+          follows: number | null
+          id: string
+          likes: number | null
+          permalink: string | null
+          post_id: string
+          post_type: string | null
+          published_at: string | null
+          reach: number | null
+          saves: number | null
+          shares: number | null
+          updated_at: string
+          username: string | null
+          views: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          comments?: number | null
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          follows?: number | null
+          id?: string
+          likes?: number | null
+          permalink?: string | null
+          post_id: string
+          post_type?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          updated_at?: string
+          username?: string | null
+          views?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          comments?: number | null
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          follows?: number | null
+          id?: string
+          likes?: number | null
+          permalink?: string | null
+          post_id?: string
+          post_type?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          updated_at?: string
+          username?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       invites: {
         Row: {
           code: string | null

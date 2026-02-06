@@ -2,16 +2,36 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileText, FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { 
+  Upload, 
+  FileText, 
+  FileSpreadsheet, 
+  Loader2, 
+  CheckCircle, 
+  AlertCircle,
+  Database,
+  Trash2,
+  RefreshCw,
+  HardDrive
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DataUploadProps {
   onDataUploaded: (type: 'csv' | 'xlsx', data: any[]) => void;
+  isSaving?: boolean;
+  totalRecords?: number;
+  onClearData?: () => void;
+  onRefresh?: () => void;
 }
 
-export function DataUpload({ onDataUploaded }: DataUploadProps) {
+export function DataUpload({ 
+  onDataUploaded, 
+  isSaving = false, 
+  totalRecords = 0,
+  onClearData,
+  onRefresh
+}: DataUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
     type: 'csv' | 'xlsx' | null;
@@ -32,13 +52,11 @@ export function DataUpload({ onDataUploaded }: DataUploadProps) {
       let data: any[] = [];
 
       if (type === 'csv') {
-        // Process CSV - will be appended to existing data
         const text = await file.text();
         const Papa = (await import('papaparse')).default;
         const result = Papa.parse(text, { header: true, skipEmptyLines: true });
         data = result.data;
       } else if (type === 'xlsx') {
-        // Process XLSX - will replace existing data
         const XLSX = await import('xlsx');
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -51,9 +69,8 @@ export function DataUpload({ onDataUploaded }: DataUploadProps) {
       setUploadStatus({
         type,
         status: 'success',
-        message: `${type.toUpperCase()} processado com sucesso! ${data.length} registros encontrados.`
+        message: `${type.toUpperCase()} processado! ${data.length} registros serão salvos no banco de dados.`
       });
-      toast.success(`${type.toUpperCase()} carregado com sucesso!`);
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
       setUploadStatus({
@@ -69,135 +86,197 @@ export function DataUpload({ onDataUploaded }: DataUploadProps) {
 
   const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      handleFileUpload(file, 'csv');
-    }
+    if (file) handleFileUpload(file, 'csv');
   };
 
   const handleXLSXUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      handleFileUpload(file, 'xlsx');
-    }
+    if (file) handleFileUpload(file, 'xlsx');
   };
+
+  const isProcessing = isUploading || isSaving;
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Upload de Dados do Instagram
-          </CardTitle>
-          <CardDescription>
-            Faça upload de arquivos CSV (incremental) ou XLSX (substituição total) com dados do Instagram
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {uploadStatus.status && (
-            <Alert className={uploadStatus.status === 'success' ? 'border-green-500 text-green-700 bg-green-50' : 'border-red-500 text-red-700 bg-red-50'}>
-              {uploadStatus.status === 'success' ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
-              <AlertDescription>{uploadStatus.message}</AlertDescription>
-            </Alert>
+      {/* Database Status Card */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5" />
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+              <Database className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Banco de Dados</h2>
+              <p className="text-sm text-muted-foreground">
+                {totalRecords > 0 
+                  ? `${totalRecords.toLocaleString('pt-BR')} registros armazenados`
+                  : 'Nenhum registro armazenado ainda'
+                }
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                disabled={isProcessing}
+                className="gap-2 rounded-xl"
+              >
+                <RefreshCw className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+            )}
+            {onClearData && totalRecords > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onClearData}
+                disabled={isProcessing}
+                className="gap-2 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" />
+                Limpar
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Status */}
+      {uploadStatus.status && (
+        <Alert className={`rounded-xl ${
+          uploadStatus.status === 'success' 
+            ? 'border-[hsl(var(--success))]/50 bg-[hsl(var(--success))]/10' 
+            : 'border-destructive/50 bg-destructive/10'
+        }`}>
+          {uploadStatus.status === 'success' ? (
+            <CheckCircle className="h-4 w-4 text-[hsl(var(--success))]" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-destructive" />
           )}
+          <AlertDescription className={
+            uploadStatus.status === 'success' ? 'text-[hsl(var(--success))]' : 'text-destructive'
+          }>
+            {uploadStatus.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CSV Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileText className="w-4 h-4 text-blue-500" />
-                  Arquivo CSV (Incremental)
-                </CardTitle>
-                <CardDescription>
-                  Adiciona novos dados aos existentes. Use para atualizações periódicas.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="csv-upload">Selecione arquivo CSV</Label>
-                    <Input
-                      id="csv-upload"
-                      type="file"
-                      accept=".csv"
-                      ref={csvInputRef}
-                      onChange={handleCSVUpload}
-                      disabled={isUploading}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    onClick={() => csvInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isUploading ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <FileText className="w-4 h-4 mr-2" />
-                    )}
-                    {isUploading ? 'Processando...' : 'Selecionar CSV'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Processing Indicator */}
+      {isSaving && (
+        <Alert className="rounded-xl border-primary/50 bg-primary/10">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <AlertDescription className="text-primary">
+            Salvando dados no banco de dados...
+          </AlertDescription>
+        </Alert>
+      )}
 
-            {/* XLSX Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileSpreadsheet className="w-4 h-4 text-green-500" />
-                  Arquivo XLSX (Substituição)
-                </CardTitle>
-                <CardDescription>
-                  Substitui todos os dados existentes. Use para datasets completos.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="xlsx-upload">Selecione arquivo XLSX</Label>
-                    <Input
-                      id="xlsx-upload"
-                      type="file"
-                      accept=".xlsx,.xls"
-                      ref={xlsxInputRef}
-                      onChange={handleXLSXUpload}
-                      disabled={isUploading}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    onClick={() => xlsxInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isUploading ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    )}
-                    {isUploading ? 'Processando...' : 'Selecionar XLSX'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Upload Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* CSV Upload */}
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="p-6 border-b border-border bg-gradient-to-br from-[hsl(var(--info))]/5 to-transparent">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-[hsl(var(--info))]/10">
+                <FileText className="w-5 h-5 text-[hsl(var(--info))]" />
+              </div>
+              <h3 className="font-semibold">CSV Incremental</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Adiciona novos dados aos existentes. Registros duplicados são atualizados.
+            </p>
           </div>
-
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p><strong>CSV:</strong> Adiciona novos posts aos dados existentes. Ideal para atualizações incrementais.</p>
-            <p><strong>XLSX:</strong> Substitui completamente os dados. Use quando tiver um dataset completo e atualizado.</p>
-            <p>Certifique-se de que os arquivos contenham as colunas esperadas para o processamento correto.</p>
+          <div className="p-6 space-y-4">
+            <div>
+              <Label htmlFor="csv-upload" className="text-sm text-muted-foreground">
+                Selecione arquivo CSV
+              </Label>
+              <Input
+                id="csv-upload"
+                type="file"
+                accept=".csv"
+                ref={csvInputRef}
+                onChange={handleCSVUpload}
+                disabled={isProcessing}
+                className="mt-1 rounded-xl"
+              />
+            </div>
+            <Button
+              onClick={() => csvInputRef.current?.click()}
+              disabled={isProcessing}
+              className="w-full rounded-xl gap-2"
+              variant="outline"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {isProcessing ? 'Processando...' : 'Importar CSV'}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* XLSX Upload */}
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="p-6 border-b border-border bg-gradient-to-br from-[hsl(var(--success))]/5 to-transparent">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-[hsl(var(--success))]/10">
+                <FileSpreadsheet className="w-5 h-5 text-[hsl(var(--success))]" />
+              </div>
+              <h3 className="font-semibold">XLSX Substituição</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Substitui todos os dados existentes. Use para datasets completos.
+            </p>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <Label htmlFor="xlsx-upload" className="text-sm text-muted-foreground">
+                Selecione arquivo XLSX
+              </Label>
+              <Input
+                id="xlsx-upload"
+                type="file"
+                accept=".xlsx,.xls"
+                ref={xlsxInputRef}
+                onChange={handleXLSXUpload}
+                disabled={isProcessing}
+                className="mt-1 rounded-xl"
+              />
+            </div>
+            <Button
+              onClick={() => xlsxInputRef.current?.click()}
+              disabled={isProcessing}
+              className="w-full rounded-xl gap-2"
+              variant="outline"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {isProcessing ? 'Processando...' : 'Importar XLSX'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="rounded-xl border border-border bg-secondary/30 p-4">
+        <div className="flex items-start gap-3">
+          <HardDrive className="w-5 h-5 text-muted-foreground mt-0.5" />
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p><strong className="text-foreground">Armazenamento Persistente:</strong> Todos os dados são salvos no banco de dados e ficam disponíveis mesmo após fechar o navegador.</p>
+            <p><strong className="text-foreground">CSV:</strong> Adiciona e atualiza registros existentes baseado no ID do post.</p>
+            <p><strong className="text-foreground">XLSX:</strong> Substitui completamente os dados armazenados.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
