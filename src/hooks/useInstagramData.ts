@@ -167,18 +167,23 @@ export function useInstagramData() {
     let newPosts: InstagramPost[] = [];
 
     try {
+      // Both CSV and XLSX now use the same incremental upsert logic
       if (type === 'csv') {
-        // Parse CSV data
         const csvText = Papa.unparse(data);
         newPosts = parseCSVData(csvText);
-        
-        // Upsert to database (insert or update based on post_id)
-        const dbRecords = newPosts.map(instagramPostToDbFormat);
-        
-        let insertedCount = 0;
-        let updatedCount = 0;
+      } else if (type === 'xlsx') {
+        newPosts = parseXLSXData(data);
+      }
 
-        for (const record of dbRecords) {
+      // Upsert to database (insert or update based on post_id)
+      const dbRecords = newPosts.map(instagramPostToDbFormat);
+      
+      let insertedCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+
+      for (const record of dbRecords) {
+        try {
           const { data: existing } = await supabase
             .from('instagram_posts')
             .select('id')
@@ -192,44 +197,42 @@ export function useInstagramData() {
               .update(record)
               .eq('post_id', record.post_id);
             
-            if (!updateError) updatedCount++;
+            if (!updateError) {
+              updatedCount++;
+            } else {
+              console.error('Update error:', updateError);
+              errorCount++;
+            }
           } else {
             // Insert new record
             const { error: insertError } = await supabase
               .from('instagram_posts')
               .insert(record);
             
-            if (!insertError) insertedCount++;
+            if (!insertError) {
+              insertedCount++;
+            } else {
+              console.error('Insert error:', insertError);
+              errorCount++;
+            }
           }
+        } catch (recordError) {
+          console.error('Record processing error:', recordError);
+          errorCount++;
         }
+      }
 
-        logActivity('upload_csv', { 
-          recordsCount: newPosts.length, 
-          insertedCount, 
-          updatedCount 
-        });
+      logActivity(`upload_${type}`, { 
+        recordsCount: newPosts.length, 
+        insertedCount, 
+        updatedCount,
+        errorCount
+      });
 
+      if (errorCount > 0) {
+        toast.warning(`${insertedCount} novos, ${updatedCount} atualizados, ${errorCount} erros`);
+      } else {
         toast.success(`${insertedCount} novos registros adicionados, ${updatedCount} atualizados`);
-
-      } else if (type === 'xlsx') {
-        // Parse XLSX data
-        newPosts = parseXLSXData(data);
-        
-        // For XLSX, replace all data
-        const dbRecords = newPosts.map(instagramPostToDbFormat);
-        
-        // Delete all existing records
-        await supabase.from('instagram_posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        
-        // Insert all new records
-        const { error: insertError } = await supabase
-          .from('instagram_posts')
-          .insert(dbRecords);
-        
-        if (insertError) throw insertError;
-
-        logActivity('upload_xlsx', { recordsCount: newPosts.length });
-        toast.success(`${newPosts.length} registros importados (substituição completa)`);
       }
 
       // Reload from database to get fresh data
@@ -239,20 +242,6 @@ export function useInstagramData() {
       console.error('Error saving to database:', err);
       toast.error('Erro ao salvar no banco de dados: ' + err.message);
       setError(err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const clearAllData = async () => {
-    try {
-      setIsSaving(true);
-      await supabase.from('instagram_posts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      setPosts([]);
-      toast.success('Todos os dados foram removidos');
-      logActivity('clear_data', {});
-    } catch (err: any) {
-      toast.error('Erro ao limpar dados: ' + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -293,7 +282,6 @@ export function useInstagramData() {
     summary, 
     addUploadedData, 
     isSaving,
-    clearAllData,
     refreshData: loadFromDatabase
   };
 }

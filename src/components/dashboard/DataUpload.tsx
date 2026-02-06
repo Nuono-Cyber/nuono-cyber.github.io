@@ -11,9 +11,9 @@ import {
   CheckCircle, 
   AlertCircle,
   Database,
-  Trash2,
   RefreshCw,
-  HardDrive
+  HardDrive,
+  TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,7 +21,6 @@ interface DataUploadProps {
   onDataUploaded: (type: 'csv' | 'xlsx', data: any[]) => void;
   isSaving?: boolean;
   totalRecords?: number;
-  onClearData?: () => void;
   onRefresh?: () => void;
 }
 
@@ -29,7 +28,6 @@ export function DataUpload({
   onDataUploaded, 
   isSaving = false, 
   totalRecords = 0,
-  onClearData,
   onRefresh
 }: DataUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -69,7 +67,7 @@ export function DataUpload({
       setUploadStatus({
         type,
         status: 'success',
-        message: `${type.toUpperCase()} processado! ${data.length} registros serão salvos no banco de dados.`
+        message: `${type.toUpperCase()} processado! ${data.length} registros serão incrementados no banco de dados.`
       });
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
@@ -107,7 +105,7 @@ export function DataUpload({
               <Database className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Banco de Dados</h2>
+              <h2 className="text-lg font-semibold">Banco de Dados Cloud</h2>
               <p className="text-sm text-muted-foreground">
                 {totalRecords > 0 
                   ? `${totalRecords.toLocaleString('pt-BR')} registros armazenados`
@@ -127,18 +125,6 @@ export function DataUpload({
               >
                 <RefreshCw className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
                 Atualizar
-              </Button>
-            )}
-            {onClearData && totalRecords > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onClearData}
-                disabled={isProcessing}
-                className="gap-2 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4" />
-                Limpar
               </Button>
             )}
           </div>
@@ -170,7 +156,7 @@ export function DataUpload({
         <Alert className="rounded-xl border-primary/50 bg-primary/10">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <AlertDescription className="text-primary">
-            Salvando dados no banco de dados...
+            Salvando dados no banco de dados cloud...
           </AlertDescription>
         </Alert>
       )}
@@ -184,10 +170,10 @@ export function DataUpload({
               <div className="p-2 rounded-lg bg-[hsl(var(--info))]/10">
                 <FileText className="w-5 h-5 text-[hsl(var(--info))]" />
               </div>
-              <h3 className="font-semibold">CSV Incremental</h3>
+              <h3 className="font-semibold">Importar CSV</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              Adiciona novos dados aos existentes. Registros duplicados são atualizados.
+              Adiciona novos dados incrementalmente. Registros duplicados são atualizados.
             </p>
           </div>
           <div className="p-6 space-y-4">
@@ -228,10 +214,10 @@ export function DataUpload({
               <div className="p-2 rounded-lg bg-[hsl(var(--success))]/10">
                 <FileSpreadsheet className="w-5 h-5 text-[hsl(var(--success))]" />
               </div>
-              <h3 className="font-semibold">XLSX Substituição</h3>
+              <h3 className="font-semibold">Importar XLSX</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              Substitui todos os dados existentes. Use para datasets completos.
+              Adiciona novos dados incrementalmente. Registros duplicados são atualizados.
             </p>
           </div>
           <div className="p-6 space-y-4">
@@ -269,11 +255,11 @@ export function DataUpload({
       {/* Info */}
       <div className="rounded-xl border border-border bg-secondary/30 p-4">
         <div className="flex items-start gap-3">
-          <HardDrive className="w-5 h-5 text-muted-foreground mt-0.5" />
+          <TrendingUp className="w-5 h-5 text-primary mt-0.5" />
           <div className="text-sm text-muted-foreground space-y-1">
-            <p><strong className="text-foreground">Armazenamento Persistente:</strong> Todos os dados são salvos no banco de dados e ficam disponíveis mesmo após fechar o navegador.</p>
-            <p><strong className="text-foreground">CSV:</strong> Adiciona e atualiza registros existentes baseado no ID do post.</p>
-            <p><strong className="text-foreground">XLSX:</strong> Substitui completamente os dados armazenados.</p>
+            <p><strong className="text-foreground">Armazenamento Incremental:</strong> Todos os dados são salvos permanentemente no cloud e acumulam ao longo do tempo.</p>
+            <p><strong className="text-foreground">Importação Inteligente:</strong> Novos registros são adicionados e existentes são atualizados baseado no ID do post.</p>
+            <p><strong className="text-foreground">Persistência:</strong> Seus dados ficam disponíveis mesmo após fechar o navegador.</p>
           </div>
         </div>
       </div>
