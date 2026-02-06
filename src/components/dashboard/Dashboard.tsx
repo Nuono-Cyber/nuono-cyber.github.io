@@ -44,7 +44,7 @@ import { toast } from 'sonner';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { posts, isLoading, error, summary, addUploadedData } = useInstagramData();
+  const { posts, isLoading, error, summary, addUploadedData, isSaving, clearAllData, refreshData } = useInstagramData();
   const { user, isSuperAdmin, signOut } = useAuthContext();
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -263,7 +263,13 @@ export function Dashboard() {
 
           {isSuperAdmin && (
             <TabsContent value="data" className="mt-0">
-              <DataUpload onDataUploaded={addUploadedData} />
+              <DataUpload 
+                onDataUploaded={addUploadedData} 
+                isSaving={isSaving}
+                totalRecords={posts.length}
+                onClearData={clearAllData}
+                onRefresh={refreshData}
+              />
             </TabsContent>
           )}
         </Tabs>
