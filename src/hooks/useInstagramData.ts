@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
-import { parseCSVData, parseXLSXData } from '@/utils/dataProcessor';
+import { parseCSVData } from '@/utils/dataProcessor';
 import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
@@ -162,18 +162,18 @@ export function useInstagramData() {
     loadFromDatabase();
   }, []);
 
-  const addUploadedData = async (type: 'csv' | 'xlsx', data: any[]) => {
+  const addUploadedData = async (type: 'csv', data: any[]) => {
+    if (type !== 'csv') {
+      toast.error('Apenas arquivos CSV são suportados para importar posts');
+      return;
+    }
+    
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 
     try {
-      // Parse data based on type
-      if (type === 'csv') {
-        const csvText = Papa.unparse(data);
-        newPosts = parseCSVData(csvText);
-      } else if (type === 'xlsx') {
-        newPosts = parseXLSXData(data);
-      }
+      const csvText = Papa.unparse(data);
+      newPosts = parseCSVData(csvText);
 
       if (newPosts.length === 0) {
         toast.error('Nenhum registro válido encontrado no arquivo');
