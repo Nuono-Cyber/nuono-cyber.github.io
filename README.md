@@ -1,118 +1,139 @@
-# Welcome to your Lovable project
+# Instagram Analytics Creator
 
-## Project info
+Uma plataforma profissional e intuitiva para análise avançada de dados do Instagram com inteligência artificial integrada.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 📊 Sobre o Projeto
 
-## How can I edit this code?
+**Instagram Analytics Creator** é uma aplicação web moderna desenvolvida para criar insights profundos sobre o desempenho de contas do Instagram. Com análises em tempo real, visualizações interativas e integração com IA, a plataforma oferece ferramentas completas para estratégia de conteúdo.
 
-There are several ways of editing your application.
+## 🚀 Início Rápido
 
-**Use Lovable**
+### Pré-requisitos
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Node.js & npm - [Instalar com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Changes made via Lovable will be committed automatically to this repo.
+### Instalação
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clonar o repositório
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navegar até o diretório
+cd insight-creator-ai
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Instalar dependências
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Iniciar servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O aplicativo estará disponível em `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📈 Gerenciamento de Dados do Instagram
 
-**Use GitHub Codespaces**
+A plataforma suporta upload e análise de dados do Instagram através de arquivos CSV e XLSX, com processamento inteligente e sincronização em tempo real com o banco de dados cloud.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Formatos Suportados
 
-## Gerenciamento de Dados do Instagram
+| Formato | Status | Funcionalidade |
+|---------|--------|-----------------|
+| CSV | ✅ Ativo | Upload incremental com upsert automático |
+| XLSX | ✅ Ativo | Import com processamento avançado |
 
-Este projeto suporta upload de dados do Instagram através de arquivos CSV e XLSX.
+### Instalação de Dependências
 
-### Status Atual
+Para suporte completo a XLSX:
 
-- ✅ **CSV (Incremental)**: Totalmente funcional
-- ✅ **XLSX (Substituição)**: Funcional (dependências instaladas)
-
-### Dependências Necessárias
-
-Para suporte completo a arquivos XLSX, execute o script de instalação:
-
-```sh
+```bash
 chmod +x install-xlsx.sh
 ./install-xlsx.sh
 ```
 
-Ou instale manualmente:
-```sh
+Ou manualmente:
+```bash
 npm install xlsx @types/xlsx
 ```
 
+### Estrutura de Dados
+
+Os arquivos devem conter as seguintes colunas:
+
+- **Horário de publicação** - Data e hora do post
+- **Descrição** - Conteúdo do post
+- **Visualizações** - Total de views
+- **Alcance** - Alcance total
+- **Curtidas** - Total de likes
+- **Comentários** - Total de comments
+- **Compartilhamentos** - Total de shares
+- **Salvamentos** - Total de saves
+- **Seguimentos** - New follows
+- **Duração (s)** - Duração em segundos
+- **Tipo de post** - Reels, Posts, Stories
+- **Link permanente** - URL do post
+
 ### Como Usar
 
-1. **Super Admin**: Acesse a aba "Gerenciar Dados" no dashboard
-2. **Upload CSV**: Adiciona novos dados aos existentes (incremental)
-3. **Upload XLSX**: Substitui completamente os dados existentes (após instalar dependências)
+1. Faça login como **Super Admin**
+2. Acesse a aba **"Gerenciar Dados"** no dashboard
+3. Selecione seu arquivo CSV ou XLSX
+4. Clique em **Importar**
+5. Os dados serão processados e salvos automaticamente
 
-### Formato dos Arquivos
+## 🛠 Stack Tecnológico
 
-Os arquivos devem conter as seguintes colunas principais:
-- `Horário de publicação`
-- `Descrição`
-- `Visualizações`
-- `Alcance`
-- `Curtidas`
-- `Comentários`
-- `Compartilhamentos`
-- `Salvamentos`
-- `Seguimentos`
-- `Duração (s)`
-- `Tipo de post`
-- `Link permanente`
+| Categoria | Tecnologia |
+|-----------|-----------|
+| **Frontend** | React + TypeScript |
+| **Build** | Vite |
+| **UI Components** | shadcn-ui |
+| **Styling** | Tailwind CSS |
+| **Backend** | Supabase (PostgreSQL + Auth) |
+| **Real-time** | Supabase Realtime |
+| **Testing** | Vitest |
 
-## What technologies are used for this project?
+## ⚙️ Funcionalidades Principais
 
-This project is built with:
+- 📊 **Dashboard Interativo** - Visualizações em tempo real
+- 🔐 **Autenticação Segura** - Sistema de convites e roles
+- 💬 **Chat Interno** - Comunicação entre admins
+- 📈 **Análises Avançadas** - 9 abas de análise diferenciadas
+- 🎨 **Tema Personalizável** - Dark/Light mode
+- ☁️ **Sincronização Cloud** - Dados sempre sincronizados
+- 🤖 **Integração IA** - Chat bot com análises inteligentes
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🏗 Estrutura do Projeto
 
-## How can I deploy this project?
+```
+insight-creator-ai/
+├── src/
+│   ├── components/        # Componentes React reutilizáveis
+│   ├── hooks/            # Custom hooks
+│   ├── pages/            # Páginas principais
+│   ├── contexts/         # Context API
+│   ├── integrations/     # Integrações externas (Supabase)
+│   └── utils/            # Funções utilitárias
+├── supabase/
+│   ├── migrations/       # Migrações do banco de dados
+│   └── functions/        # Edge functions
+└── public/               # Arquivos estáticos
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 👨‍💼 Sobre o Desenvolvedor
 
-## Can I connect a custom domain to my Lovable project?
+**Instagram Analytics Creator** foi desenvolvido por:
 
-Yes, you can!
+**Gabriel Nunes Barbosa Nogueira**
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+📱 Instagram: [@ideia_enegocios](https://instagram.com/ideia_enegocios)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Um profissional apaixonado por análise de dados, desenvolvimento web e estratégia digital.
+
+## 📄 Licença
+
+Este projeto está sob licença privada. Todos os direitos reservados.
+
+---
+
+**Versão**: 1.0.0  
+**Última atualização**: Fevereiro de 2026
