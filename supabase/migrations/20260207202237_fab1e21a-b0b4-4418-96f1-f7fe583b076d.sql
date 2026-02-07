@@ -46,3 +46,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.internal_messages;
 
 -- Add unique constraint on post_id for proper upsert
 ALTER TABLE public.instagram_posts ADD CONSTRAINT instagram_posts_post_id_unique UNIQUE (post_id);
+
+-- Clear conflicted Instagram posts data
+TRUNCATE TABLE public.instagram_posts CASCADE;
