@@ -63,6 +63,19 @@ Para importar automaticamente dados do Google Sheets usando uma Service Account 
 - No frontend, use `supabase.functions.invoke('sheets-sync', { body: { action: 'fetch', spreadsheetId, range } })` para buscar os dados e repassar ao processador XLSX.
 
 Observação de segurança: nunca comite o JSON da service account no repositório. Prefira armazená-lo como variável de ambiente no Supabase ou em um segredo do CI/CD.
+
+Agendamento (sync automático)
+-----------------------------
+Para sincronizar automaticamente (ex.: a cada hora), configure um agendamento que invoque a função `sheets-sync` com `action: 'sync'` e o `spreadsheetId` no corpo. Exemplo usando `curl` e a Service Role Key:
+
+```bash
+curl -X POST "https://<your-project>.functions.supabase.co/sheets-sync" \
+	-H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+	-H "Content-Type: application/json" \
+	-d '{"action":"sync","spreadsheetId":"YOUR_SPREADSHEET_ID","range":"A:Z"}'
+```
+
+Você pode criar um agendamento no seu provedor de cron (CRON job), GitHub Actions, ou usar o scheduler do próprio Supabase para chamar essa rota periodicamente.
 ```
 
 ### Estrutura de Dados

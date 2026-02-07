@@ -38,7 +38,7 @@ serve(async (req) => {
     const body = await req.json();
     const { action, spreadsheetId, range } = body;
 
-    if (action !== 'fetch' || !spreadsheetId) {
+    if (!action || !spreadsheetId) {
       return new Response(JSON.stringify({ error: 'Invalid request' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -80,7 +80,115 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, rows, count: rows.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // If action is 'fetch' just return rows
+    if (action === 'fetch') {
+      return new Response(JSON.stringify({ success: true, rows, count: rows.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // If action is 'sync' attempt to upsert into instagram_posts
+    if (action === 'sync') {
+      const parseNumber = (v: any) => {
+        if (typeof v === 'number') return v;
+        if (!v) return 0;
+        const cleaned = String(v).replace(/[^0-9.-]/g, '');
+        return parseFloat(cleaned) || 0;
+      };
+
+      const parseDate = (v: any) => {
+        if (!v) return null;
+        const iso = new Date(v);
+        if (!isNaN(iso.getTime())) return iso.toISOString();
+        try {
+          const [datePart, timePart] = String(v).split(' ');
+          const [day, month, year] = datePart.split('/').map(Number);
+          const [hh = 0, mm = 0] = (timePart || '00:00').split(':').map(Number);
+          return new Date(year, month - 1, day, hh, mm).toISOString();
+        } catch {
+          return null;
+        }
+      };
+
+      const mapKey = (key: string) => {
+        const k = key.toLowerCase().trim();
+        if (k === 'identificação do post' || k === 'id' || k === 'post id' || k === 'post_id') return 'post_id';
+        if (k === 'identificação da conta' || k === 'account id' || k === 'account_id') return 'account_id';
+        if (k === 'nome da conta' || k === 'account name' || k === 'account_name') return 'account_name';
+        if (k === 'nome de usuário da conta' || k === 'username') return 'username';
+        if (k === 'descrição' || k === 'description') return 'description';
+        if (k === 'duração (s)' || k === 'duration' || k === 'duration (s)') return 'duration';
+        if (k === 'horário de publicação' || k === 'published_at' || k === 'published at') return 'published_at';
+        if (k === 'link permanente' || k === 'permalink') return 'permalink';
+        if (k === 'tipo de post' || k === 'post_type' || k === 'post type') return 'post_type';
+        if (k === 'visualizações' || k === 'views') return 'views';
+        if (k === 'alcance' || k === 'reach') return 'reach';
+        if (k === 'curtidas' || k === 'likes') return 'likes';
+        if (k === 'comentários' || k === 'comments') return 'comments';
+        if (k === 'compartilhamentos' || k === 'shares') return 'shares';
+        if (k === 'salvamentos' || k === 'saves') return 'saves';
+        if (k === 'seguimentos' || k === 'follows') return 'follows';
+        return null;
+      };
+
+      const headers = values[0].map((h: string) => String(h).trim());
+      const normalizedHeaders = headers.map(h => mapKey(h));
+
+      const records = rows.map(r => {
+        const rec: Record<string, any> = {};
+        headers.forEach((h: string, idx: number) => {
+          const key = normalizedHeaders[idx];
+          if (!key) return;
+          const val = r[h];
+          if (['views','reach','likes','comments','shares','saves','follows','duration'].includes(key)) {
+            rec[key] = parseNumber(val);
+          } else if (key === 'published_at') {
+            rec[key] = parseDate(val);
+          } else {
+            rec[key] = val ? String(val) : null;
+          }
+        });
+        if (!rec.post_id) {
+          rec.post_id = rec.permalink ? rec.permalink : `sheet-${Math.random().toString(36).slice(2,9)}`;
+        }
+        return rec;
+      });
+
+      const { data: upserted, error: upsertError } = await supabase
+        .from('instagram_posts')
+        .upsert(records.map(r => ({
+          post_id: r.post_id,
+          account_id: r.account_id || null,
+          username: r.username || null,
+          account_name: r.account_name || null,
+          description: r.description || null,
+          duration: r.duration || null,
+          published_at: r.published_at || null,
+          permalink: r.permalink || null,
+          post_type: r.post_type || null,
+          views: r.views || 0,
+          reach: r.reach || 0,
+          likes: r.likes || 0,
+          shares: r.shares || 0,
+          follows: r.follows || 0,
+          comments: r.comments || 0,
+          saves: r.saves || 0,
+        })), { onConflict: 'post_id' })
+        .select();
+
+      if (upsertError) {
+        console.error('Upsert error:', upsertError);
+        return new Response(JSON.stringify({ success: false, error: upsertError.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      await supabase.from('activity_logs').insert({
+        user_id: userId,
+        action: 'sheets_sync',
+        details: { count: records.length },
+      });
+
+      return new Response(JSON.stringify({ success: true, count: records.length, upsertedCount: upserted?.length || records.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e) {
     console.error('Sheets sync error:', e);

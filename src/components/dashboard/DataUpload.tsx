@@ -126,6 +126,54 @@ export function DataUpload({
             <div>
               <h2 className="text-lg font-semibold">Banco de Dados Cloud</h2>
               <p className="text-sm text-muted-foreground">
+            {/* Google Sheets Import Card */}
+            <div className="rounded-2xl border border-border bg-card overflow-hidden">
+              <div className="p-6 border-b border-border bg-gradient-to-br from-[hsl(var(--info))]/5 to-transparent">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-[hsl(var(--info))]/10">
+                    <FileText className="w-5 h-5 text-[hsl(var(--info))]" />
+                  </div>
+                  <h3 className="font-semibold">Importar do Google Sheets</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Informe o ID da planilha e o intervalo (opcional) para buscar os dados.</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <Label htmlFor="sheet-id" className="text-sm text-muted-foreground">ID da planilha (entre /d/ e /edit na URL)</Label>
+                  <Input
+                    id="sheet-id"
+                    value={sheetId}
+                    onChange={(e) => setSheetId(e.target.value)}
+                    placeholder="1a2B3cD4eF5GhIjK..."
+                    className="mt-1 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sheet-range" className="text-sm text-muted-foreground">Range (ex.: A:Z ou Sheet1!A:Z)</Label>
+                  <Input
+                    id="sheet-range"
+                    value={sheetRange}
+                    onChange={(e) => setSheetRange(e.target.value)}
+                    placeholder="A:Z"
+                    className="mt-1 rounded-xl"
+                  />
+                </div>
+                <Button
+                  onClick={handleFetchSheet}
+                  disabled={isProcessing || isFetchingSheet}
+                  className="w-full rounded-xl gap-2"
+                  variant="outline"
+                >
+                  {isFetchingSheet ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {isFetchingSheet ? 'Importando...' : 'Importar do Google Sheets'}
+                </Button>
+              </div>
+            </div>
+
                 {totalRecords > 0 
                   ? `${totalRecords.toLocaleString('pt-BR')} registros armazenados`
                   : 'Nenhum registro armazenado ainda'
