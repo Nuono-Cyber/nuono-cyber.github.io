@@ -22,6 +22,7 @@ import { BenchmarkTab } from './tabs/BenchmarkTab';
 import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
+import { InternalChat } from '@/components/chat/InternalChat';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { 
   LayoutDashboard, 
@@ -281,7 +282,10 @@ export function Dashboard() {
         </div>
       </footer>
 
-      {/* ChatBot */}
+      {/* Internal Chat */}
+      <InternalChat />
+
+      {/* AI ChatBot */}
       <ChatBot posts={posts} summary={summary} />
     </div>
   );

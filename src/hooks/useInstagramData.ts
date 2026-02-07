@@ -167,7 +167,7 @@ export function useInstagramData() {
     let newPosts: InstagramPost[] = [];
 
     try {
-      // Both CSV and XLSX now use the same incremental upsert logic
+      // Parse data based on type
       if (type === 'csv') {
         const csvText = Papa.unparse(data);
         newPosts = parseCSVData(csvText);
@@ -175,65 +175,42 @@ export function useInstagramData() {
         newPosts = parseXLSXData(data);
       }
 
-      // Upsert to database (insert or update based on post_id)
+      if (newPosts.length === 0) {
+        toast.error('Nenhum registro válido encontrado no arquivo');
+        setIsSaving(false);
+        return;
+      }
+
+      // Convert to database format
       const dbRecords = newPosts.map(instagramPostToDbFormat);
       
-      let insertedCount = 0;
-      let updatedCount = 0;
-      let errorCount = 0;
+      console.log(`Processing ${dbRecords.length} records for upsert...`);
 
-      for (const record of dbRecords) {
-        try {
-          const { data: existing } = await supabase
-            .from('instagram_posts')
-            .select('id')
-            .eq('post_id', record.post_id)
-            .maybeSingle();
+      // Use native Supabase upsert with onConflict for atomic operation
+      const { data: upsertedData, error: upsertError } = await supabase
+        .from('instagram_posts')
+        .upsert(dbRecords, { 
+          onConflict: 'post_id',
+          ignoreDuplicates: false // Update existing records
+        })
+        .select();
 
-          if (existing) {
-            // Update existing record
-            const { error: updateError } = await supabase
-              .from('instagram_posts')
-              .update(record)
-              .eq('post_id', record.post_id);
-            
-            if (!updateError) {
-              updatedCount++;
-            } else {
-              console.error('Update error:', updateError);
-              errorCount++;
-            }
-          } else {
-            // Insert new record
-            const { error: insertError } = await supabase
-              .from('instagram_posts')
-              .insert(record);
-            
-            if (!insertError) {
-              insertedCount++;
-            } else {
-              console.error('Insert error:', insertError);
-              errorCount++;
-            }
-          }
-        } catch (recordError) {
-          console.error('Record processing error:', recordError);
-          errorCount++;
-        }
+      if (upsertError) {
+        console.error('Upsert error:', upsertError);
+        toast.error(`Erro ao salvar: ${upsertError.message}`);
+        setError(upsertError.message);
+        return;
       }
 
+      const processedCount = upsertedData?.length || dbRecords.length;
+      
       logActivity(`upload_${type}`, { 
         recordsCount: newPosts.length, 
-        insertedCount, 
-        updatedCount,
-        errorCount
+        processedCount
       });
 
-      if (errorCount > 0) {
-        toast.warning(`${insertedCount} novos, ${updatedCount} atualizados, ${errorCount} erros`);
-      } else {
-        toast.success(`${insertedCount} novos registros adicionados, ${updatedCount} atualizados`);
-      }
+      toast.success(`${processedCount} registros processados com sucesso!`);
+      console.log(`Successfully upserted ${processedCount} records`);
 
       // Reload from database to get fresh data
       await loadFromDatabase();
