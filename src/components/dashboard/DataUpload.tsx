@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DataUploadProps {
   onDataUploaded: (type: 'csv' | 'xlsx', data: any[]) => void;
@@ -36,6 +37,9 @@ export function DataUpload({
   }>({ type: null, status: null, message: '' });
 
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const [sheetId, setSheetId] = useState('');
+  const [sheetRange, setSheetRange] = useState('A:Z');
+  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -65,6 +69,40 @@ export function DataUpload({
       toast.error('Erro ao processar CSV');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleFetchSheet = async () => {
+    if (!sheetId) {
+      toast.error('Informe o ID da planilha');
+      return;
+    }
+
+    setIsFetchingSheet(true);
+    setUploadStatus({ type: 'xlsx', status: null, message: '' });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('sheets-sync', {
+        body: { action: 'fetch', spreadsheetId: sheetId, range: sheetRange },
+      });
+
+      if (error) throw error;
+      if (!data?.rows) throw new Error('Resposta inválida do serviço');
+
+      // Passa os dados como se fossem XLSX
+      onDataUploaded('xlsx', data.rows);
+
+      setUploadStatus({
+        type: 'xlsx',
+        status: 'success',
+        message: `Planilha importada! ${data.count || data.rows.length} registros.`,
+      });
+    } catch (err: any) {
+      console.error('Erro ao buscar planilha:', err);
+      setUploadStatus({ type: 'xlsx', status: 'error', message: err.message || 'Erro desconhecido' });
+      toast.error('Erro ao importar planilha do Google Sheets');
+    } finally {
+      setIsFetchingSheet(false);
     }
   };
 
@@ -187,6 +225,41 @@ export function DataUpload({
       </div>
 
       {/* Info */}
+      {/* Google Sheets Import Card */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="p-6 border-b border-border bg-gradient-to-br from-[hsl(var(--info))]/5 to-transparent">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-[hsl(var(--info))]/10">
+              <Database className="w-5 h-5 text-[hsl(var(--info))]" />
+            </div>
+            <h3 className="font-semibold">Importar do Google Sheets</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">Importe diretamente uma planilha do Google (via Service Account).</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <Label htmlFor="sheet-id" className="text-sm text-muted-foreground">ID da planilha</Label>
+            <Input id="sheet-id" value={sheetId} onChange={(e) => setSheetId(e.target.value)} placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" className="mt-1 rounded-xl" />
+          </div>
+          <div>
+            <Label htmlFor="sheet-range" className="text-sm text-muted-foreground">Range (opcional)</Label>
+            <Input id="sheet-range" value={sheetRange} onChange={(e) => setSheetRange(e.target.value)} placeholder="Ex: Sheet1!A:Z or A:Z" className="mt-1 rounded-xl" />
+          </div>
+          <Button
+            onClick={handleFetchSheet}
+            disabled={isFetchingSheet || isSaving}
+            className="w-full rounded-xl gap-2"
+            variant="outline"
+          >
+            {isFetchingSheet ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Database className="w-4 h-4" />
+            )}
+            {isFetchingSheet ? 'Importando...' : 'Importar do Google Sheets'}
+          </Button>
+        </div>
+      </div>
       <div className="rounded-xl border border-border bg-secondary/30 p-4">
         <div className="flex items-start gap-3">
           <TrendingUp className="w-5 h-5 text-primary mt-0.5" />

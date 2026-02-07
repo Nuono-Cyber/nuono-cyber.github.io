@@ -53,6 +53,16 @@ chmod +x install-xlsx.sh
 Ou manualmente:
 ```bash
 npm install xlsx @types/xlsx
+
+Google Sheets (Service Account)
+-------------------------------
+Para importar automaticamente dados do Google Sheets usando uma Service Account e a função Supabase:
+
+- Adicione a variável de ambiente `GOOGLE_SERVICE_ACCOUNT` no dashboard do Supabase Functions contendo o JSON da service account (stringificada).
+- A função `sheets-sync` foi adicionada em `supabase/functions/sheets-sync` — ela expõe um endpoint que lê `spreadsheetId` e `range` no corpo e retorna as linhas como objetos (usando a primeira linha como cabeçalho).
+- No frontend, use `supabase.functions.invoke('sheets-sync', { body: { action: 'fetch', spreadsheetId, range } })` para buscar os dados e repassar ao processador XLSX.
+
+Observação de segurança: nunca comite o JSON da service account no repositório. Prefira armazená-lo como variável de ambiente no Supabase ou em um segredo do CI/CD.
 ```
 
 ### Estrutura de Dados
