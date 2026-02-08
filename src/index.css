@@ -77,67 +77,67 @@
     --sidebar-ring: 340 75% 55%;
   }
 
-  /* Light Theme */
+  /* Light Theme - Corporate Bitrix Style */
   .theme-light {
-    --instagram-purple: 306 90% 55%;
-    --instagram-pink: 340 80% 50%;
-    --instagram-orange: 25 95% 50%;
-    --instagram-yellow: 45 95% 50%;
+    --instagram-purple: 220 70% 50%;
+    --instagram-pink: 220 65% 55%;
+    --instagram-orange: 200 85% 45%;
+    --instagram-yellow: 45 85% 50%;
     
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
+    --background: 220 20% 97%;
+    --foreground: 220 30% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 30% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 30% 15%;
 
-    --primary: 340 75% 50%;
+    --primary: 220 75% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 220 15% 93%;
+    --secondary-foreground: 220 30% 25%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 306 70% 45%;
+    --accent: 200 80% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 340 75% 50%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 220 75% 50%;
 
-    --success: 142 76% 36%;
+    --success: 150 70% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 45 95% 47%;
-    --warning-foreground: 222 47% 11%;
-    --info: 210 100% 50%;
+    --warning: 40 90% 50%;
+    --warning-foreground: 220 30% 15%;
+    --info: 200 85% 45%;
     --info-foreground: 0 0% 100%;
 
-    --chart-1: 340 75% 50%;
-    --chart-2: 306 70% 45%;
-    --chart-3: 25 95% 50%;
-    --chart-4: 142 76% 36%;
-    --chart-5: 210 100% 50%;
-    --chart-6: 45 95% 47%;
+    --chart-1: 220 75% 50%;
+    --chart-2: 200 80% 45%;
+    --chart-3: 150 70% 40%;
+    --chart-4: 40 90% 50%;
+    --chart-5: 270 60% 55%;
+    --chart-6: 0 70% 55%;
 
-    --glass-bg: 0 0% 100% / 0.85;
-    --glass-border: 220 13% 91% / 0.6;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    --glass-bg: 0 0% 100% / 0.95;
+    --glass-border: 220 20% 88% / 0.8;
+    --glass-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 340 75% 50%;
+    --sidebar-background: 220 25% 95%;
+    --sidebar-foreground: 220 30% 15%;
+    --sidebar-primary: 220 75% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 340 75% 50%;
+    --sidebar-accent: 220 15% 90%;
+    --sidebar-accent-foreground: 220 30% 25%;
+    --sidebar-border: 220 20% 88%;
+    --sidebar-ring: 220 75% 50%;
   }
 
   /* Dracula Theme */
@@ -251,7 +251,7 @@
 
   .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.15);
   }
 
   .metric-card::before {
@@ -260,20 +260,20 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, hsl(var(--instagram-purple)), hsl(var(--instagram-pink)), hsl(var(--instagram-orange)));
-    opacity: 0.5;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    opacity: 0.8;
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--instagram-purple)), hsl(var(--instagram-pink)), hsl(var(--instagram-orange)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .instagram-gradient {
-    background: linear-gradient(135deg, hsl(var(--instagram-purple)), hsl(var(--instagram-pink)), hsl(var(--instagram-orange)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   }
 
   .glow-border {
@@ -286,7 +286,7 @@
     inset: -1px;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, hsl(var(--instagram-purple)), hsl(var(--instagram-pink)), hsl(var(--instagram-orange)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -316,7 +316,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, hsl(var(--instagram-purple)), hsl(var(--instagram-pink)), hsl(var(--instagram-orange)));
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
   }
 
   .stat-positive {
@@ -338,8 +338,8 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px hsla(340, 75%, 55%, 0.3); }
-    50% { box-shadow: 0 0 40px hsla(340, 75%, 55%, 0.5); }
+    0%, 100% { box-shadow: 0 0 20px hsla(var(--primary), 0.3); }
+    50% { box-shadow: 0 0 40px hsla(var(--primary), 0.5); }
   }
 
   @keyframes slide-in {

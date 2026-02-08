@@ -1,6 +1,7 @@
 import { InstagramPost } from '@/types/instagram';
 import { ChartCard } from '../ChartCard';
 import { formatNumber, calculateMetricSummary, getCorrelationMatrix } from '@/utils/dataProcessor';
+import { getChartColors, getTooltipStyle } from '@/utils/chartColors';
 import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -23,6 +24,8 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 export function EngagementTab({ posts }: EngagementTabProps) {
+  const colors = getChartColors();
+  const tooltipStyle = getTooltipStyle();
   const metricDistributions = useMemo(() => {
     const metrics = ['views', 'reach', 'likes', 'comments', 'shares', 'saves'] as const;
     return metrics.map(metric => ({
@@ -136,33 +139,29 @@ export function EngagementTab({ posts }: EngagementTabProps) {
               }))} 
               layout="vertical"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis 
                 type="number" 
                 domain={[-1, 1]} 
-                stroke="hsl(215, 20%, 65%)" 
+                stroke={colors.axis} 
                 fontSize={12}
               />
               <YAxis 
                 dataKey="pair" 
                 type="category" 
                 width={140} 
-                stroke="hsl(215, 20%, 65%)" 
+                stroke={colors.axis} 
                 fontSize={11}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number) => [value.toFixed(3), 'Correlação']}
               />
               <Bar dataKey="correlation" radius={[0, 4, 4, 0]}>
                 {strongCorrelations.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.correlation > 0 ? 'hsl(142, 76%, 45%)' : 'hsl(0, 84%, 60%)'}
+                    fill={entry.correlation > 0 ? colors.success : colors.destructive}
                   />
                 ))}
               </Bar>
@@ -178,34 +177,30 @@ export function EngagementTab({ posts }: EngagementTabProps) {
       >
         <ResponsiveContainer width="100%" height={400}>
           <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
             <XAxis 
               dataKey="views" 
               name="Views" 
-              stroke="hsl(215, 20%, 65%)" 
+              stroke={colors.axis} 
               fontSize={12}
               tickFormatter={formatNumber}
             />
             <YAxis 
               dataKey="reach" 
               name="Alcance" 
-              stroke="hsl(215, 20%, 65%)" 
+              stroke={colors.axis} 
               fontSize={12}
               tickFormatter={formatNumber}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(222, 47%, 9%)',
-                border: '1px solid hsl(222, 47%, 18%)',
-                borderRadius: '8px',
-              }}
+              contentStyle={tooltipStyle}
               formatter={(value: number, name: string) => [formatNumber(value), name]}
             />
-            <Scatter data={scatterData} fill="hsl(340, 75%, 55%)">
+            <Scatter data={scatterData} fill={colors.primary}>
               {scatterData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={`hsl(${340 - entry.engagement * 10}, 75%, 55%)`}
+                  fill={colors.primary}
                   opacity={0.7}
                 />
               ))}
@@ -221,10 +216,10 @@ export function EngagementTab({ posts }: EngagementTabProps) {
       >
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={engagementRateData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
             <XAxis 
               dataKey="name" 
-              stroke="hsl(215, 20%, 65%)" 
+              stroke={colors.axis} 
               fontSize={10}
               angle={-45}
               textAnchor="end"
@@ -232,33 +227,27 @@ export function EngagementTab({ posts }: EngagementTabProps) {
             />
             <YAxis 
               yAxisId="left"
-              stroke="hsl(215, 20%, 65%)" 
+              stroke={colors.axis} 
               fontSize={12}
             />
             <YAxis 
               yAxisId="right"
               orientation="right"
-              stroke="hsl(215, 20%, 65%)" 
+              stroke={colors.axis} 
               fontSize={12}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(222, 47%, 9%)',
-                border: '1px solid hsl(222, 47%, 18%)',
-                borderRadius: '8px',
-              }}
-            />
-            <Bar yAxisId="left" dataKey="likes" fill="hsl(340, 75%, 55%)" name="Curtidas" />
-            <Bar yAxisId="left" dataKey="comments" fill="hsl(306, 70%, 50%)" name="Comentários" />
-            <Bar yAxisId="left" dataKey="saves" fill="hsl(25, 95%, 55%)" name="Salvamentos" />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Bar yAxisId="left" dataKey="likes" fill={colors.primary} name="Curtidas" />
+            <Bar yAxisId="left" dataKey="comments" fill={colors.secondary} name="Comentários" />
+            <Bar yAxisId="left" dataKey="saves" fill={colors.tertiary} name="Salvamentos" />
             <Line 
               yAxisId="right" 
               type="monotone" 
               dataKey="engagementRate" 
-              stroke="hsl(142, 76%, 45%)" 
+              stroke={colors.success} 
               strokeWidth={2}
               name="Taxa de Engajamento (%)"
-              dot={{ fill: 'hsl(142, 76%, 45%)', r: 4 }}
+              dot={{ fill: colors.success, r: 4 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
