@@ -1,6 +1,7 @@
 import { InstagramPost } from '@/types/instagram';
 import { ChartCard } from '../ChartCard';
 import { formatNumber, getPerformanceByDay, getPerformanceByHour } from '@/utils/dataProcessor';
+import { getChartColors, getTooltipStyle } from '@/utils/chartColors';
 import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -19,6 +20,8 @@ const PERIOD_LABELS = {
 };
 
 export function TemporalTab({ posts }: TemporalTabProps) {
+  const colors = getChartColors();
+  const tooltipStyle = getTooltipStyle();
   const dayPerformance = useMemo(() => getPerformanceByDay(posts), [posts]);
   const hourPerformance = useMemo(() => getPerformanceByHour(posts), [posts]);
 
@@ -128,19 +131,15 @@ export function TemporalTab({ posts }: TemporalTabProps) {
             <BarChart data={dayPerformance}>
               <defs>
                 <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(340, 75%, 55%)" />
-                  <stop offset="100%" stopColor="hsl(306, 70%, 50%)" />
+                  <stop offset="0%" stopColor="hsl(var(--chart-1))" />
+                  <stop offset="100%" stopColor="hsl(var(--chart-2))" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis dataKey="day" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis dataKey="day" stroke={colors.axis} fontSize={12} />
+              <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number) => [formatNumber(value), 'Média Views']}
               />
               <Bar 
@@ -159,26 +158,22 @@ export function TemporalTab({ posts }: TemporalTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={hourPerformance}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis 
                 dataKey="hour" 
-                stroke="hsl(215, 20%, 65%)" 
+                stroke={colors.axis} 
                 fontSize={12}
                 tickFormatter={(h) => `${h}h`}
               />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
+              <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number) => [formatNumber(value), 'Média Views']}
                 labelFormatter={(h) => `${h}:00`}
               />
               <Bar 
                 dataKey="avgViews" 
-                fill="hsl(25, 95%, 55%)" 
+                fill={colors.tertiary} 
                 radius={[4, 4, 0, 0]}
                 name="Média de Views"
               />
@@ -195,19 +190,15 @@ export function TemporalTab({ posts }: TemporalTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={periodPerformance} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis type="number" stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
-              <YAxis dataKey="period" type="category" width={120} stroke="hsl(215, 20%, 65%)" fontSize={11} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis type="number" stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
+              <YAxis dataKey="period" type="category" width={120} stroke={colors.axis} fontSize={11} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number, name: string) => [formatNumber(value), name]}
               />
-              <Bar dataKey="avgViews" fill="hsl(340, 75%, 55%)" name="Média Views" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="avgReach" fill="hsl(306, 70%, 50%)" name="Média Alcance" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="avgViews" fill={colors.primary} name="Média Views" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="avgReach" fill={colors.secondary} name="Média Alcance" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -218,31 +209,25 @@ export function TemporalTab({ posts }: TemporalTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData}>
-              <PolarGrid stroke="hsl(222, 47%, 18%)" />
-              <PolarAngleAxis dataKey="day" stroke="hsl(215, 20%, 65%)" fontSize={11} />
-              <PolarRadiusAxis stroke="hsl(215, 20%, 65%)" fontSize={10} />
+              <PolarGrid stroke={colors.grid} />
+              <PolarAngleAxis dataKey="day" stroke={colors.axis} fontSize={11} />
+              <PolarRadiusAxis stroke={colors.axis} fontSize={10} />
               <Radar 
                 name="Views" 
                 dataKey="views" 
-                stroke="hsl(340, 75%, 55%)" 
-                fill="hsl(340, 75%, 55%)" 
+                stroke={colors.primary} 
+                fill={colors.primary} 
                 fillOpacity={0.3} 
               />
               <Radar 
                 name="Alcance" 
                 dataKey="reach" 
-                stroke="hsl(306, 70%, 50%)" 
-                fill="hsl(306, 70%, 50%)" 
+                stroke={colors.secondary} 
+                fill={colors.secondary} 
                 fillOpacity={0.3} 
               />
-              <Legend />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
-              />
+              <Legend wrapperStyle={{ color: colors.foreground }} />
+              <Tooltip contentStyle={tooltipStyle} />
             </RadarChart>
           </ResponsiveContainer>
         </ChartCard>

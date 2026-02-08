@@ -27,11 +27,12 @@ interface OverviewTabProps {
 }
 
 const CHART_COLORS = [
-  'hsl(340, 75%, 55%)',
-  'hsl(306, 70%, 50%)',
-  'hsl(25, 95%, 55%)',
-  'hsl(142, 76%, 45%)',
-  'hsl(210, 100%, 55%)',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
 ];
 
 export function OverviewTab({ posts, summary }: OverviewTabProps) {
@@ -157,30 +158,31 @@ export function OverviewTab({ posts, summary }: OverviewTabProps) {
             <AreaChart data={timelineData}>
               <defs>
                 <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(340, 75%, 55%)" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(340, 75%, 55%)" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(306, 70%, 50%)" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(306, 70%, 50%)" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis dataKey="date" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={(v) => formatNumber(v)} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => formatNumber(v)} />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'hsl(222, 47%, 9%)', 
-                  border: '1px solid hsl(222, 47%, 18%)',
+                  backgroundColor: 'hsl(var(--card))', 
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
+                  color: 'hsl(var(--foreground))',
                 }}
-                labelStyle={{ color: 'hsl(210, 40%, 98%)' }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
               />
               <Area 
                 type="monotone" 
                 dataKey="views" 
                 name="Visualizações"
-                stroke="hsl(340, 75%, 55%)" 
+                stroke="hsl(var(--chart-1))" 
                 fillOpacity={1} 
                 fill="url(#colorViews)" 
               />
@@ -188,7 +190,7 @@ export function OverviewTab({ posts, summary }: OverviewTabProps) {
                 type="monotone" 
                 dataKey="reach" 
                 name="Alcance"
-                stroke="hsl(306, 70%, 50%)" 
+                stroke="hsl(var(--chart-2))" 
                 fillOpacity={1} 
                 fill="url(#colorReach)" 
               />
@@ -217,12 +219,13 @@ export function OverviewTab({ posts, summary }: OverviewTabProps) {
               </Pie>
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'hsl(222, 47%, 9%)', 
-                  border: '1px solid hsl(222, 47%, 18%)',
+                  backgroundColor: 'hsl(var(--card))', 
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
+                  color: 'hsl(var(--foreground))',
                 }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: 'hsl(var(--foreground))' }} />
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>

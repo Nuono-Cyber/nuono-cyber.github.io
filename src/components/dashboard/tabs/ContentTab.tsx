@@ -1,6 +1,7 @@
 import { InstagramPost } from '@/types/instagram';
 import { ChartCard } from '../ChartCard';
 import { formatNumber, getContentTypePerformance } from '@/utils/dataProcessor';
+import { getChartColors, getTooltipStyle, CHART_COLORS_ARRAY } from '@/utils/chartColors';
 import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,6 +13,8 @@ interface ContentTabProps {
 }
 
 export function ContentTab({ posts }: ContentTabProps) {
+  const colors = getChartColors();
+  const tooltipStyle = getTooltipStyle();
   const contentTypePerformance = useMemo(() => {
     return getContentTypePerformance(posts).map(ct => ({
       ...ct,
@@ -131,19 +134,15 @@ export function ContentTab({ posts }: ContentTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={contentTypePerformance}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis dataKey="type" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis dataKey="type" stroke={colors.axis} fontSize={12} />
+              <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number, name: string) => [formatNumber(value), name]}
               />
-              <Bar dataKey="avgViews" fill="hsl(340, 75%, 55%)" name="Média Views" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="avgReach" fill="hsl(306, 70%, 50%)" name="Média Alcance" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avgViews" fill={colors.primary} name="Média Views" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avgReach" fill={colors.secondary} name="Média Alcance" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -167,16 +166,10 @@ export function ContentTab({ posts }: ContentTabProps) {
                 labelLine={false}
               >
                 {contentTypePerformance.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS_ARRAY[index % CHART_COLORS_ARRAY.length]} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
-              />
+              <Tooltip contentStyle={tooltipStyle} />
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -190,37 +183,33 @@ export function ContentTab({ posts }: ContentTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis 
                 dataKey="duration" 
                 name="Duração (s)" 
-                stroke="hsl(215, 20%, 65%)" 
+                stroke={colors.axis} 
                 fontSize={12}
                 tickFormatter={(v) => `${v}s`}
               />
               <YAxis 
                 dataKey="views" 
                 name="Views" 
-                stroke="hsl(215, 20%, 65%)" 
+                stroke={colors.axis} 
                 fontSize={12}
                 tickFormatter={formatNumber}
               />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number, name: string) => [
                   name === 'Views' ? formatNumber(value) : `${value}s`,
                   name
                 ]}
               />
-              <Scatter data={durationAnalysis} fill="hsl(340, 75%, 55%)">
+              <Scatter data={durationAnalysis} fill={colors.primary}>
                 {durationAnalysis.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={`hsl(${340 - (entry.duration / 2)}, 75%, 55%)`}
+                    fill={colors.primary}
                   />
                 ))}
               </Scatter>
@@ -234,22 +223,18 @@ export function ContentTab({ posts }: ContentTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={durationBuckets}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis dataKey="name" stroke="hsl(215, 20%, 65%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis dataKey="name" stroke={colors.axis} fontSize={12} />
+              <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number, name: string) => [
                   name === 'Qtd Posts' ? value : formatNumber(value),
                   name
                 ]}
               />
-              <Bar dataKey="avgViews" fill="hsl(25, 95%, 55%)" name="Média Views" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="count" fill="hsl(142, 76%, 45%)" name="Qtd Posts" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avgViews" fill={colors.tertiary} name="Média Views" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill={colors.engagement} name="Qtd Posts" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -263,18 +248,14 @@ export function ContentTab({ posts }: ContentTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={descriptionLengthAnalysis}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis dataKey="name" stroke="hsl(215, 20%, 65%)" fontSize={11} />
-              <YAxis stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis dataKey="name" stroke={colors.axis} fontSize={11} />
+              <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number) => [formatNumber(value), 'Média Views']}
               />
-              <Bar dataKey="avgViews" fill="hsl(210, 100%, 55%)" name="Média Views" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="avgViews" fill={colors.info} name="Média Views" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -285,22 +266,18 @@ export function ContentTab({ posts }: ContentTabProps) {
         >
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={emojiAnalysis} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 47%, 18%)" />
-              <XAxis type="number" stroke="hsl(215, 20%, 65%)" fontSize={12} tickFormatter={formatNumber} />
-              <YAxis dataKey="name" type="category" width={100} stroke="hsl(215, 20%, 65%)" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+              <XAxis type="number" stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
+              <YAxis dataKey="name" type="category" width={100} stroke={colors.axis} fontSize={12} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(222, 47%, 9%)',
-                  border: '1px solid hsl(222, 47%, 18%)',
-                  borderRadius: '8px',
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number, name: string) => [
                   name === 'Qtd Posts' ? value : formatNumber(value),
                   name
                 ]}
               />
-              <Bar dataKey="avgViews" fill="hsl(45, 95%, 55%)" name="Média Views" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="count" fill="hsl(340, 75%, 55%)" name="Qtd Posts" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="avgViews" fill={colors.quaternary} name="Média Views" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill={colors.primary} name="Qtd Posts" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
