@@ -89,8 +89,8 @@ export function DataUpload({
       if (error) throw error;
       if (!data?.rows) throw new Error('Resposta inválida do serviço');
 
-      // Passa os dados como se fossem XLSX
-      onDataUploaded('xlsx', data.rows);
+      // Passa os dados como CSV (o hook processa apenas CSV agora)
+      onDataUploaded('csv', data.rows);
 
       setUploadStatus({
         type: 'xlsx',
