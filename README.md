@@ -12,7 +12,7 @@ Uma plataforma profissional e intuitiva para análise avançada de dados do Inst
 
 - Node.js & npm - [Instalar com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### Instalação
+### Instalação para desenvolvimento
 
 ```bash
 # Clonar o repositório
@@ -29,6 +29,20 @@ npm run dev
 ```
 
 O aplicativo estará disponível em `http://localhost:5173`
+
+### Publicando no GitHub Pages
+
+O projeto já está configurado com um fluxo de trabalho GitHub Actions (`.github/workflows/deploy.yml`) que:
+
+1. Instala as dependências;
+2. Executa `npm run build`;
+3. Empacota o diretório `dist` e faz o deploy para a página do repositório.
+
+> ⚠️ **Importante**: apenas o branch `main` é observado. A página é publicada a partir do conteúdo do diretório `dist`.
+
+Para ativar a hospedagem, verifique nas configurações do repositório (`Settings → Pages`) se a fonte está definida para a branch `gh-pages` (ou deixe o workflow criar e configurar automaticamente).
+
+Se você vir uma tela em branco ao abrir `https://nuono-cyber.github.io`, provavelmente algum outro workflow anterior estava sobrescrevendo os arquivos com a raiz do repositório. Este repositório agora só usa o workflow acima — outros arquivos de workflow antigos foram removidos.
 
 ## 📈 Gerenciamento de Dados do Instagram
 
