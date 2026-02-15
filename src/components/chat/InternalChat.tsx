@@ -77,7 +77,7 @@ export function InternalChat() {
       <Button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-transform',
+          'fixed z-50 bottom-6 right-4 sm:bottom-24 sm:right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-transform',
           isOpen && 'hidden'
         )}
       >
@@ -86,7 +86,7 @@ export function InternalChat() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-24 right-6 z-50 w-[420px] h-[580px] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <Card className="fixed z-50 inset-x-4 bottom-6 sm:bottom-24 sm:left-auto sm:right-6 sm:w-[420px] max-w-[95vw] sm:h-[580px] h-auto min-h-[280px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="p-4 border-b border-border/50 bg-primary">
             <div className="flex items-center justify-between">
@@ -119,7 +119,7 @@ export function InternalChat() {
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'users')} className="flex-1 flex flex-col">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'users')} className="flex-1 flex flex-col min-h-0">
             <TabsList className="grid grid-cols-2 mx-4 mt-3">
               <TabsTrigger value="chat" className="gap-2">
                 <MessageSquare className="h-4 w-4" />
@@ -132,10 +132,10 @@ export function InternalChat() {
             </TabsList>
 
             {/* Chat Tab */}
-            <TabsContent value="chat" className="flex-1 flex flex-col mt-0 overflow-hidden">
-              <div className="flex flex-1 overflow-hidden">
+            <TabsContent value="chat" className="flex-1 flex flex-col mt-0 overflow-hidden min-h-0">
+              <div className="flex flex-1 overflow-hidden min-h-0">
                 {/* User List Sidebar */}
-                <div className="w-28 border-r border-border/50 flex flex-col bg-secondary/20">
+                <div className="sm:w-28 w-20 border-r border-border/50 flex flex-col bg-secondary/20">
                   <div className="p-2 text-xs font-medium text-muted-foreground uppercase">
                     Canais
                   </div>
@@ -153,7 +153,7 @@ export function InternalChat() {
                   <div className="p-2 text-xs font-medium text-muted-foreground uppercase mt-2">
                     Direto
                   </div>
-                  <ScrollArea className="flex-1">
+                  <ScrollArea className="flex-1 min-h-0">
                     {users.map((u) => (
                       <button
                         key={u.user_id}
@@ -177,8 +177,8 @@ export function InternalChat() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 flex flex-col">
-                  <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+                <div className="flex-1 flex flex-col min-h-0">
+                  <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollRef}>
                     {isLoading ? (
                       <div className="flex items-center justify-center h-full">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -253,16 +253,16 @@ export function InternalChat() {
                   {/* Input */}
                   <form
                     onSubmit={handleSubmit}
-                    className="p-4 border-t border-border/50"
+                    className="p-4 border-t border-border/50 flex-shrink-0"
                   >
                     <div className="flex gap-2">
-                      <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Digite sua mensagem..."
-                        disabled={isSending}
-                        className="flex-1 bg-secondary/50"
-                      />
+                        <Input
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="Digite sua mensagem..."
+                          disabled={isSending}
+                          className="flex-1 min-w-0 bg-secondary/50"
+                        />
                       <Button
                         type="submit"
                         disabled={isSending || !input.trim()}
