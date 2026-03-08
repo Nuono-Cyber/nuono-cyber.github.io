@@ -12,11 +12,11 @@ interface ChartCardProps {
 export function ChartCard({ title, description, children, className, action }: ChartCardProps) {
   return (
     <div className={cn('chart-container', className)}>
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-5">
         <div>
-          <h3 className="font-semibold text-lg">{title}</h3>
+          <h3 className="font-semibold text-sm text-foreground">{title}</h3>
           {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
           )}
         </div>
         {action && <div>{action}</div>}
