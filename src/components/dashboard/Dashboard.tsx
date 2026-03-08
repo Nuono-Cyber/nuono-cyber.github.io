@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useInstagramData } from '@/hooks/useInstagramData';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -35,6 +35,8 @@ export function Dashboard() {
   const { posts, isLoading, error, summary, addUploadedData, isSaving, refreshData } = useInstagramData();
   const { isSuperAdmin } = useAuthContext();
   const [activeTab, setActiveTab] = useState('overview');
+  const [chatBotOpen, setChatBotOpen] = useState(false);
+  const [internalChatOpen, setInternalChatOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -136,8 +138,8 @@ export function Dashboard() {
       </div>
 
       {/* Floating Elements */}
-      <InternalChat />
-      <ChatBot />
+      <InternalChat isOpen={internalChatOpen} onOpenChange={setInternalChatOpen} otherIsOpen={chatBotOpen} />
+      <ChatBot isOpen={chatBotOpen} onOpenChange={setChatBotOpen} otherIsOpen={internalChatOpen} />
     </SidebarProvider>
   );
 }

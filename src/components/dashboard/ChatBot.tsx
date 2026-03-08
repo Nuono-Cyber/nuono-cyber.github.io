@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,10 +9,17 @@ import {
   TrendingUp, Clock, HelpCircle, Target, Zap, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface ChatBotProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  otherIsOpen: boolean;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/instagram-chat`;
@@ -27,8 +34,7 @@ const suggestedQuestions = [
   { icon: HelpCircle, text: "Analise meus piores posts e diga o que evitar" },
 ];
 
-export function ChatBot() {
-  const [isOpen, setIsOpen] = useState(false);
+export function ChatBot({ isOpen, onOpenChange, otherIsOpen }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +68,6 @@ export function ChatBot() {
     };
 
     try {
-      // Only send conversation messages, data is fetched server-side via RAG
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
@@ -143,11 +148,15 @@ export function ChatBot() {
     sendMessage(input);
   };
 
+  // Button: always at right-24 (next to InternalChat button at right-6)
+  // Window: opens above button at right-6. If otherIsOpen, slides to right-[440px]
+  const windowRight = otherIsOpen ? 'right-[440px]' : 'right-6';
+
   return (
     <>
       {/* Floating Button */}
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => onOpenChange(true)}
         className={cn(
           "fixed bottom-6 right-24 z-50 h-14 w-14 rounded-full shadow-lg instagram-gradient hover:scale-110 transition-all duration-300",
           isOpen && "hidden"
@@ -158,7 +167,15 @@ export function ChatBot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-[450px] z-50 w-[400px] max-w-[calc(100vw-30rem)] h-[600px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <Card 
+          className={cn(
+            "fixed bottom-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-in-out",
+            windowRight
+          )}
+          style={{ 
+            animation: 'slide-up 0.3s ease-out',
+          }}
+        >
           {/* Header */}
           <div className="p-4 border-b border-border/50 instagram-gradient">
             <div className="flex items-center justify-between">
@@ -174,7 +191,7 @@ export function ChatBot() {
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={() => setIsOpen(false)}
+                onClick={() => onOpenChange(false)}
                 className="text-white hover:bg-white/20"
               >
                 <X className="h-5 w-5" />
