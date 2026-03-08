@@ -35,6 +35,8 @@ export function Dashboard() {
   const { posts, isLoading, error, summary, addUploadedData, isSaving, refreshData } = useInstagramData();
   const { isSuperAdmin } = useAuthContext();
   const [activeTab, setActiveTab] = useState('overview');
+  const [chatBotOpen, setChatBotOpen] = useState(false);
+  const [internalChatOpen, setInternalChatOpen] = useState(false);
 
   if (isLoading) {
     return (
