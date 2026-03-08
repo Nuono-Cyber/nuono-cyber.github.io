@@ -138,8 +138,8 @@ export function Dashboard() {
       </div>
 
       {/* Floating Elements */}
-      <InternalChat />
-      <ChatBot />
+      <InternalChat isOpen={internalChatOpen} onOpenChange={setInternalChatOpen} otherIsOpen={chatBotOpen} />
+      <ChatBot isOpen={chatBotOpen} onOpenChange={setChatBotOpen} otherIsOpen={internalChatOpen} />
     </SidebarProvider>
   );
 }
