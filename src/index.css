@@ -2,142 +2,136 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @layer base {
-  /* Default Dark Theme */
+  /* Default Dark Theme - Enterprise Slate */
   :root,
   .theme-dark {
-    /* Instagram-inspired gradient colors */
-    --instagram-purple: 306 90% 60%;
-    --instagram-pink: 340 80% 55%;
-    --instagram-orange: 25 95% 55%;
-    --instagram-yellow: 45 95% 55%;
+    --instagram-purple: 250 70% 60%;
+    --instagram-pink: 340 65% 55%;
+    --instagram-orange: 25 85% 55%;
+    --instagram-yellow: 45 85% 55%;
     
-    /* Main color palette - Dark professional theme */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    --background: 224 30% 5%;
+    --foreground: 210 20% 95%;
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
+    --card: 224 25% 8%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 224 25% 7%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 340 75% 55%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 306 70% 50%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 222 47% 18%;
-    --input: 222 47% 18%;
-    --ring: 340 75% 55%;
-
-    --radius: 0.75rem;
-
-    /* Semantic colors for metrics */
-    --success: 142 76% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 45 95% 55%;
-    --warning-foreground: 222 47% 6%;
-    --info: 210 100% 55%;
-    --info-foreground: 210 40% 98%;
-    
-    /* Chart colors */
-    --chart-1: 340 75% 55%;
-    --chart-2: 306 70% 50%;
-    --chart-3: 25 95% 55%;
-    --chart-4: 142 76% 45%;
-    --chart-5: 210 100% 55%;
-    --chart-6: 45 95% 55%;
-
-    /* Glassmorphism */
-    --glass-bg: 222 47% 12% / 0.8;
-    --glass-border: 222 47% 20% / 0.5;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-
-    /* Sidebar */
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 340 75% 55%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 15%;
-    --sidebar-ring: 340 75% 55%;
-  }
-
-  /* Light Theme - Corporate Bitrix Style */
-  .theme-light {
-    --instagram-purple: 220 70% 50%;
-    --instagram-pink: 220 65% 55%;
-    --instagram-orange: 200 85% 45%;
-    --instagram-yellow: 45 85% 50%;
-    
-    --background: 220 20% 97%;
-    --foreground: 220 30% 15%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 15%;
-
-    --primary: 220 75% 50%;
+    --primary: 220 80% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 93%;
-    --secondary-foreground: 220 30% 25%;
+    --secondary: 224 20% 12%;
+    --secondary-foreground: 210 20% 90%;
 
-    --muted: 220 15% 93%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 224 20% 14%;
+    --muted-foreground: 220 15% 55%;
 
-    --accent: 200 80% 45%;
+    --accent: 250 60% 58%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 220 75% 50%;
+    --border: 224 20% 14%;
+    --input: 224 20% 14%;
+    --ring: 220 80% 58%;
 
-    --success: 150 70% 40%;
+    --radius: 0.625rem;
+
+    --success: 152 60% 48%;
     --success-foreground: 0 0% 100%;
-    --warning: 40 90% 50%;
-    --warning-foreground: 220 30% 15%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 224 30% 5%;
+    --info: 200 90% 55%;
+    --info-foreground: 0 0% 100%;
+    
+    --chart-1: 220 80% 58%;
+    --chart-2: 250 60% 58%;
+    --chart-3: 152 60% 48%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 200 90% 55%;
+    --chart-6: 340 65% 55%;
+
+    --glass-bg: 224 25% 8% / 0.85;
+    --glass-border: 224 20% 18% / 0.5;
+    --glass-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
+
+    --sidebar-background: 224 30% 4%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 220 80% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 20% 10%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 224 20% 12%;
+    --sidebar-ring: 220 80% 58%;
+  }
+
+  /* Light Theme - Corporate Clean */
+  .theme-light {
+    --instagram-purple: 220 65% 50%;
+    --instagram-pink: 340 55% 50%;
+    --instagram-orange: 25 75% 50%;
+    --instagram-yellow: 45 80% 48%;
+    
+    --background: 220 14% 96%;
+    --foreground: 224 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 30% 12%;
+
+    --primary: 220 75% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 224 20% 30%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 250 55% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 68% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 220 75% 48%;
+
+    --success: 152 55% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 88% 48%;
+    --warning-foreground: 224 30% 12%;
     --info: 200 85% 45%;
     --info-foreground: 0 0% 100%;
 
-    --chart-1: 220 75% 50%;
-    --chart-2: 200 80% 45%;
-    --chart-3: 150 70% 40%;
-    --chart-4: 40 90% 50%;
-    --chart-5: 270 60% 55%;
-    --chart-6: 0 70% 55%;
+    --chart-1: 220 75% 48%;
+    --chart-2: 250 55% 52%;
+    --chart-3: 152 55% 40%;
+    --chart-4: 38 88% 48%;
+    --chart-5: 200 85% 45%;
+    --chart-6: 340 55% 50%;
 
-    --glass-bg: 0 0% 100% / 0.95;
-    --glass-border: 220 20% 88% / 0.8;
-    --glass-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
+    --glass-bg: 0 0% 100% / 0.9;
+    --glass-border: 220 15% 90% / 0.8;
+    --glass-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
 
-    --sidebar-background: 220 25% 95%;
-    --sidebar-foreground: 220 30% 15%;
-    --sidebar-primary: 220 75% 50%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 30% 12%;
+    --sidebar-primary: 220 75% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 90%;
-    --sidebar-accent-foreground: 220 30% 25%;
-    --sidebar-border: 220 20% 88%;
-    --sidebar-ring: 220 75% 50%;
+    --sidebar-accent: 220 14% 95%;
+    --sidebar-accent-foreground: 224 20% 30%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 220 75% 48%;
   }
 
   /* Dracula Theme */
@@ -156,24 +150,24 @@
     --popover: 232 14% 21%;
     --popover-foreground: 60 30% 96%;
 
-    --primary: 326 100% 74%;
+    --primary: 265 89% 78%;
     --primary-foreground: 231 15% 18%;
 
     --secondary: 232 14% 25%;
     --secondary-foreground: 60 30% 96%;
 
     --muted: 232 14% 25%;
-    --muted-foreground: 225 14% 65%;
+    --muted-foreground: 225 14% 60%;
 
-    --accent: 265 89% 78%;
+    --accent: 326 100% 74%;
     --accent-foreground: 231 15% 18%;
 
     --destructive: 0 100% 67%;
     --destructive-foreground: 60 30% 96%;
 
-    --border: 232 14% 28%;
-    --input: 232 14% 28%;
-    --ring: 326 100% 74%;
+    --border: 232 14% 26%;
+    --input: 232 14% 26%;
+    --ring: 265 89% 78%;
 
     --success: 135 94% 65%;
     --success-foreground: 231 15% 18%;
@@ -182,25 +176,25 @@
     --info: 191 97% 77%;
     --info-foreground: 231 15% 18%;
 
-    --chart-1: 326 100% 74%;
-    --chart-2: 265 89% 78%;
-    --chart-3: 31 100% 71%;
-    --chart-4: 135 94% 65%;
+    --chart-1: 265 89% 78%;
+    --chart-2: 326 100% 74%;
+    --chart-3: 135 94% 65%;
+    --chart-4: 65 92% 76%;
     --chart-5: 191 97% 77%;
-    --chart-6: 65 92% 76%;
+    --chart-6: 31 100% 71%;
 
     --glass-bg: 232 14% 21% / 0.85;
     --glass-border: 232 14% 30% / 0.5;
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --glass-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
 
     --sidebar-background: 231 15% 16%;
     --sidebar-foreground: 60 30% 96%;
-    --sidebar-primary: 326 100% 74%;
+    --sidebar-primary: 265 89% 78%;
     --sidebar-primary-foreground: 231 15% 18%;
-    --sidebar-accent: 232 14% 25%;
+    --sidebar-accent: 232 14% 23%;
     --sidebar-accent-foreground: 60 30% 96%;
-    --sidebar-border: 232 14% 25%;
-    --sidebar-ring: 326 100% 74%;
+    --sidebar-border: 232 14% 24%;
+    --sidebar-ring: 265 89% 78%;
   }
 }
 
@@ -210,27 +204,28 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
@@ -243,15 +238,14 @@
   }
 
   .metric-card {
-    @apply relative overflow-hidden rounded-xl p-6 transition-all duration-300;
+    @apply relative overflow-hidden rounded-xl p-5 transition-all duration-200;
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    box-shadow: var(--glass-shadow);
   }
 
   .metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.15);
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1);
   }
 
   .metric-card::before {
@@ -260,9 +254,14 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
-    opacity: 0.8;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .metric-card:hover::before {
+    opacity: 1;
   }
 
   .gradient-text {
@@ -292,15 +291,15 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.2s;
   }
 
   .glow-border:hover::after {
-    opacity: 1;
+    opacity: 0.6;
   }
 
   .chart-container {
-    @apply rounded-xl p-4;
+    @apply rounded-xl p-5;
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
@@ -331,19 +330,18 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Animation classes */
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-6px); }
   }
 
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px hsla(var(--primary), 0.3); }
-    50% { box-shadow: 0 0 40px hsla(var(--primary), 0.5); }
+    0%, 100% { box-shadow: 0 0 12px hsla(var(--primary), 0.2); }
+    50% { box-shadow: 0 0 24px hsla(var(--primary), 0.35); }
   }
 
   @keyframes slide-in {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -356,11 +354,11 @@
   }
 
   .animate-slide-in {
-    animation: slide-in 0.5s ease-out forwards;
+    animation: slide-in 0.4s ease-out forwards;
   }
 
-  .stagger-1 { animation-delay: 0.1s; }
-  .stagger-2 { animation-delay: 0.2s; }
-  .stagger-3 { animation-delay: 0.3s; }
-  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
 }

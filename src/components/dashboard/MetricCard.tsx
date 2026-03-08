@@ -23,30 +23,31 @@ export function MetricCard({
   iconColor = 'text-primary',
 }: MetricCardProps) {
   return (
-    <div className={cn('metric-card glow-border', className)}>
-      <div className="flex items-start justify-between mb-4">
-        <div className={cn('p-3 rounded-xl bg-secondary/50', iconColor)}>
-          <Icon className="w-5 h-5" />
+    <div className={cn('metric-card group', className)}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+        <div className={cn('p-2 rounded-lg bg-secondary/60', iconColor)}>
+          <Icon className="w-4 h-4" />
         </div>
-        {trend !== undefined && (
-          <div className={cn(
-            'flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full',
-            trend >= 0 ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'
-          )}>
-            <span>{trend >= 0 ? '↑' : '↓'}</span>
-            <span>{Math.abs(trend).toFixed(1)}%</span>
-          </div>
-        )}
       </div>
       
       <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <p className="text-3xl font-bold tracking-tight">{value}</p>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        )}
+        <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
+        <div className="flex items-center gap-2">
+          {trend !== undefined && (
+            <span className={cn(
+              'inline-flex items-center text-[11px] font-semibold',
+              trend >= 0 ? 'text-success' : 'text-destructive'
+            )}>
+              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
+            </span>
+          )}
+          {subtitle && (
+            <span className="text-[11px] text-muted-foreground">{subtitle}</span>
+          )}
+        </div>
         {trendLabel && (
-          <p className="text-xs text-muted-foreground mt-2">{trendLabel}</p>
+          <p className="text-[11px] text-muted-foreground">{trendLabel}</p>
         )}
       </div>
     </div>
