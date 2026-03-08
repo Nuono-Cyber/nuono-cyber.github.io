@@ -286,7 +286,7 @@ export function Dashboard() {
       <InternalChat />
 
       {/* AI ChatBot */}
-      <ChatBot posts={posts} summary={summary} />
+      <ChatBot />
     </div>
   );
 }
