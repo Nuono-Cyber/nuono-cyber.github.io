@@ -86,7 +86,7 @@ export function InternalChat() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed z-50 inset-x-4 bottom-6 sm:bottom-24 sm:left-auto sm:right-6 sm:w-[420px] max-w-[95vw] sm:h-[580px] h-auto min-h-[280px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <Card className="fixed z-50 bottom-6 right-6 w-[420px] max-w-[95vw] h-[650px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="p-4 border-b border-border/50 bg-primary">
             <div className="flex items-center justify-between">

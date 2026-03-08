@@ -158,7 +158,7 @@ export function ChatBot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 z-50 w-[420px] h-[650px] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <Card className="fixed bottom-6 right-[460px] z-50 w-[420px] h-[650px] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="p-4 border-b border-border/50 instagram-gradient">
             <div className="flex items-center justify-between">
