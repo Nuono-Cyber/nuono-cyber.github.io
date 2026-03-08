@@ -149,7 +149,7 @@ export function ChatBot() {
       <Button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg instagram-gradient hover:scale-110 transition-transform",
+          "fixed bottom-6 right-24 z-50 h-14 w-14 rounded-full shadow-lg instagram-gradient hover:scale-110 transition-transform",
           isOpen && "hidden"
         )}
       >
