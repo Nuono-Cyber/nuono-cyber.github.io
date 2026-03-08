@@ -5,7 +5,8 @@ import { getChartColors, getTooltipStyle } from '@/utils/chartColors';
 import { useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
+  ScatterChart, Scatter, ZAxis, Cell
 } from 'recharts';
 
 interface TemporalTabProps {
@@ -37,16 +38,9 @@ export function TemporalTab({ posts }: TemporalTabProps) {
 
   const periodPerformance = useMemo(() => {
     const byPeriod: Record<string, InstagramPost[]> = {
-      morning: [],
-      afternoon: [],
-      evening: [],
-      night: [],
+      morning: [], afternoon: [], evening: [], night: [],
     };
-
-    posts.forEach(post => {
-      byPeriod[post.period].push(post);
-    });
-
+    posts.forEach(post => { byPeriod[post.period].push(post); });
     return Object.entries(byPeriod).map(([period, periodPosts]) => ({
       period: PERIOD_LABELS[period as keyof typeof PERIOD_LABELS],
       avgViews: periodPosts.length > 0 ? periodPosts.reduce((sum, p) => sum + p.views, 0) / periodPosts.length : 0,
@@ -56,34 +50,39 @@ export function TemporalTab({ posts }: TemporalTabProps) {
     }));
   }, [posts]);
 
-  const heatmapData = useMemo(() => {
-    const data: { day: string; hour: number; value: number; count: number }[] = [];
-    const grouped: Record<string, { total: number; count: number }> = {};
+  // Bubble chart data: each bubble = day+hour combo, size = avg views, color = engagement
+  const bubbleData = useMemo(() => {
+    const DAY_ORDER = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const grouped: Record<string, { totalViews: number; totalEng: number; count: number }> = {};
 
     posts.forEach(post => {
       const key = `${post.dayName}-${post.hour}`;
-      if (!grouped[key]) grouped[key] = { total: 0, count: 0 };
-      grouped[key].total += post.views;
+      if (!grouped[key]) grouped[key] = { totalViews: 0, totalEng: 0, count: 0 };
+      grouped[key].totalViews += post.views;
+      grouped[key].totalEng += post.engagementRate;
       grouped[key].count += 1;
     });
 
-    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-    
-    days.forEach(day => {
-      for (let hour = 6; hour <= 18; hour++) {
-        const key = `${day}-${hour}`;
-        const entry = grouped[key];
-        data.push({
-          day,
-          hour,
-          value: entry ? entry.total / entry.count : 0,
-          count: entry ? entry.count : 0,
-        });
-      }
-    });
-
-    return data;
+    return Object.entries(grouped).map(([key, val]) => {
+      const [day, hourStr] = key.split('-');
+      const hour = Number(hourStr);
+      const avgViews = val.totalViews / val.count;
+      const avgEng = val.totalEng / val.count;
+      const dayIndex = DAY_ORDER.indexOf(day);
+      return {
+        dayIndex: dayIndex >= 0 ? dayIndex : 0,
+        dayLabel: day,
+        hour,
+        avgViews,
+        avgEngagement: avgEng,
+        postCount: val.count,
+        // bubble size
+        z: avgViews,
+      };
+    }).sort((a, b) => a.dayIndex - b.dayIndex || a.hour - b.hour);
   }, [posts]);
+
+  const maxBubbleViews = useMemo(() => Math.max(...bubbleData.map(d => d.avgViews), 1), [bubbleData]);
 
   const radarData = useMemo(() => {
     return dayPerformance.map(day => ({
@@ -93,6 +92,8 @@ export function TemporalTab({ posts }: TemporalTabProps) {
       engagement: day.avgEngagement * 100,
     }));
   }, [dayPerformance]);
+
+  const DAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -138,16 +139,8 @@ export function TemporalTab({ posts }: TemporalTabProps) {
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis dataKey="day" stroke={colors.axis} fontSize={12} />
               <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(value: number) => [formatNumber(value), 'Média Views']}
-              />
-              <Bar 
-                dataKey="avgViews" 
-                fill="url(#barGradient)" 
-                radius={[4, 4, 0, 0]}
-                name="Média de Views"
-              />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatNumber(value), 'Média Views']} />
+              <Bar dataKey="avgViews" fill="url(#barGradient)" radius={[4, 4, 0, 0]} name="Média de Views" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -159,24 +152,10 @@ export function TemporalTab({ posts }: TemporalTabProps) {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={hourPerformance}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-              <XAxis 
-                dataKey="hour" 
-                stroke={colors.axis} 
-                fontSize={12}
-                tickFormatter={(h) => `${h}h`}
-              />
+              <XAxis dataKey="hour" stroke={colors.axis} fontSize={12} tickFormatter={(h) => `${h}h`} />
               <YAxis stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(value: number) => [formatNumber(value), 'Média Views']}
-                labelFormatter={(h) => `${h}:00`}
-              />
-              <Bar 
-                dataKey="avgViews" 
-                fill={colors.tertiary} 
-                radius={[4, 4, 0, 0]}
-                name="Média de Views"
-              />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatNumber(value), 'Média Views']} labelFormatter={(h) => `${h}:00`} />
+              <Bar dataKey="avgViews" fill={colors.tertiary} radius={[4, 4, 0, 0]} name="Média de Views" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -193,10 +172,7 @@ export function TemporalTab({ posts }: TemporalTabProps) {
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis type="number" stroke={colors.axis} fontSize={12} tickFormatter={formatNumber} />
               <YAxis dataKey="period" type="category" width={120} stroke={colors.axis} fontSize={11} />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(value: number, name: string) => [formatNumber(value), name]}
-              />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: number, name: string) => [formatNumber(value), name]} />
               <Bar dataKey="avgViews" fill={colors.primary} name="Média Views" radius={[0, 4, 4, 0]} />
               <Bar dataKey="avgReach" fill={colors.secondary} name="Média Alcance" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -212,20 +188,8 @@ export function TemporalTab({ posts }: TemporalTabProps) {
               <PolarGrid stroke={colors.grid} />
               <PolarAngleAxis dataKey="day" stroke={colors.axis} fontSize={11} />
               <PolarRadiusAxis stroke={colors.axis} fontSize={10} />
-              <Radar 
-                name="Views" 
-                dataKey="views" 
-                stroke={colors.primary} 
-                fill={colors.primary} 
-                fillOpacity={0.3} 
-              />
-              <Radar 
-                name="Alcance" 
-                dataKey="reach" 
-                stroke={colors.secondary} 
-                fill={colors.secondary} 
-                fillOpacity={0.3} 
-              />
+              <Radar name="Views" dataKey="views" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
+              <Radar name="Alcance" dataKey="reach" stroke={colors.secondary} fill={colors.secondary} fillOpacity={0.3} />
               <Legend wrapperStyle={{ color: colors.foreground }} />
               <Tooltip contentStyle={tooltipStyle} />
             </RadarChart>
@@ -233,68 +197,87 @@ export function TemporalTab({ posts }: TemporalTabProps) {
         </ChartCard>
       </div>
 
-      {/* Heatmap */}
+      {/* Bubble Chart replacing Heatmap */}
       <ChartCard 
-        title="Mapa de Calor: Dia × Hora" 
-        description="Visualize os melhores momentos para postar"
+        title="Mapa de Oportunidade: Dia × Hora" 
+        description="Cada bolha representa uma combinação dia+hora. Tamanho = views, Cor = intensidade de performance"
       >
-        <div className="overflow-x-auto">
-          <div className="min-w-[600px]">
-            <div className="grid grid-cols-[80px_repeat(13,1fr)] gap-1">
-              {/* Header */}
-              <div className="p-2 text-xs text-muted-foreground"></div>
-              {Array.from({ length: 13 }, (_, i) => i + 6).map(hour => (
-                <div key={hour} className="p-2 text-center text-xs text-muted-foreground">
-                  {hour}h
-                </div>
-              ))}
-              
-              {/* Rows */}
-              {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(day => (
-                <>
-                  <div key={`label-${day}`} className="p-2 text-xs text-muted-foreground">
-                    {day}
+        <ResponsiveContainer width="100%" height={400}>
+          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
+            <XAxis 
+              type="number" 
+              dataKey="hour" 
+              name="Hora" 
+              domain={[5, 23]}
+              ticks={[6, 8, 10, 12, 14, 16, 18, 20, 22]}
+              tickFormatter={(h) => `${h}h`}
+              stroke={colors.axis} 
+              fontSize={12}
+              label={{ value: 'Hora do dia', position: 'insideBottom', offset: -10, fill: colors.axis, fontSize: 11 }}
+            />
+            <YAxis 
+              type="number" 
+              dataKey="dayIndex" 
+              name="Dia" 
+              domain={[-0.5, 6.5]}
+              ticks={[0, 1, 2, 3, 4, 5, 6]}
+              tickFormatter={(i) => DAY_LABELS[i] || ''}
+              stroke={colors.axis} 
+              fontSize={12}
+              label={{ value: 'Dia da semana', angle: -90, position: 'insideLeft', offset: 10, fill: colors.axis, fontSize: 11 }}
+            />
+            <ZAxis type="number" dataKey="z" range={[40, 800]} />
+            <Tooltip 
+              contentStyle={tooltipStyle}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                if (!d) return null;
+                return (
+                  <div style={tooltipStyle} className="p-3 rounded-lg shadow-lg">
+                    <p className="font-semibold text-sm">{d.dayLabel} às {d.hour}h</p>
+                    <p className="text-xs mt-1">📊 Média Views: <strong>{formatNumber(d.avgViews)}</strong></p>
+                    <p className="text-xs">💡 Engajamento: <strong>{d.avgEngagement.toFixed(2)}%</strong></p>
+                    <p className="text-xs">📝 Posts: <strong>{d.postCount}</strong></p>
                   </div>
-                  {Array.from({ length: 13 }, (_, i) => {
-                    const hour = i + 6;
-                    const cell = heatmapData.find(d => d.day === day && d.hour === hour);
-                    const value = cell?.value || 0;
-                    const maxValue = Math.max(...heatmapData.map(d => d.value));
-                    const intensity = maxValue > 0 ? value / maxValue : 0;
-                    
-                    return (
-                      <div
-                        key={`${day}-${hour}`}
-                        className="aspect-square rounded flex items-center justify-center text-xs font-mono transition-all hover:scale-110"
-                        style={{
-                          backgroundColor: value > 0 
-                            ? `hsla(340, 75%, 55%, ${0.2 + intensity * 0.8})`
-                            : 'hsl(222, 47%, 12%)',
-                        }}
-                        title={`${day} ${hour}h: ${formatNumber(value)} views (${cell?.count || 0} posts)`}
-                      >
-                        {cell?.count || ''}
-                      </div>
-                    );
-                  })}
-                </>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-center gap-4 mt-4 text-sm text-muted-foreground">
+                );
+              }}
+            />
+            <Scatter data={bubbleData} name="Performance">
+              {bubbleData.map((entry, index) => {
+                const intensity = entry.avgViews / maxBubbleViews;
+                // Color gradient from cool blue to hot pink
+                const hue = 340 - intensity * 120; // 340 (pink) to 220 (blue)
+                const sat = 60 + intensity * 20;
+                const light = 55 - intensity * 15;
+                return (
+                  <Cell 
+                    key={index} 
+                    fill={`hsl(${hue}, ${sat}%, ${light}%)`} 
+                    fillOpacity={0.7 + intensity * 0.3}
+                    stroke={`hsl(${hue}, ${sat}%, ${light - 10}%)`}
+                    strokeWidth={1}
+                  />
+                );
+              })}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+        <div className="flex items-center justify-center gap-6 mt-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsla(340, 75%, 55%, 0.2)' }}></div>
-            <span>Baixo</span>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(220, 60%, 55%)' }}></div>
+            <span>Baixa performance</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsla(340, 75%, 55%, 0.6)' }}></div>
-            <span>Médio</span>
+            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: 'hsl(280, 70%, 48%)' }}></div>
+            <span>Média</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsla(340, 75%, 55%, 1)' }}></div>
-            <span>Alto</span>
+            <div className="w-5 h-5 rounded-full" style={{ backgroundColor: 'hsl(340, 80%, 40%)' }}></div>
+            <span>Alta performance</span>
           </div>
+          <span className="text-xs italic">Tamanho = volume de views</span>
         </div>
       </ChartCard>
     </div>
