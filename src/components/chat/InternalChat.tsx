@@ -20,7 +20,13 @@ import { cn } from '@/lib/utils';
 import { useInternalChat, ChatUser } from '@/hooks/useInternalChat';
 import { useAuth } from '@/hooks/useAuth';
 
-export function InternalChat() {
+interface InternalChatProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  otherIsOpen: boolean;
+}
+
+export function InternalChat({ isOpen, onOpenChange, otherIsOpen }: InternalChatProps) {
   const { user } = useAuth();
   const {
     messages,
@@ -31,7 +37,6 @@ export function InternalChat() {
     sendMessage,
   } = useInternalChat();
 
-  const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'users'>('chat');
@@ -71,13 +76,17 @@ export function InternalChat() {
 
   if (!user) return null;
 
+  // Button: always at right-6
+  // Window: opens above button at right-6. If otherIsOpen, stays at right-6 (it's the rightmost)
+  const windowRight = 'right-6';
+
   return (
     <>
       {/* Floating Button */}
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => onOpenChange(true)}
         className={cn(
-          'fixed z-50 bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-transform',
+          'fixed z-50 bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-300',
           isOpen && 'hidden'
         )}
       >
@@ -86,7 +95,15 @@ export function InternalChat() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed z-50 bottom-6 right-6 w-[420px] max-w-[95vw] h-[650px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <Card 
+          className={cn(
+            "fixed z-50 bottom-6 w-[420px] max-w-[95vw] h-[600px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-in-out",
+            windowRight
+          )}
+          style={{
+            animation: 'slide-up 0.3s ease-out',
+          }}
+        >
           {/* Header */}
           <div className="p-4 border-b border-border/50 bg-primary">
             <div className="flex items-center justify-between">
@@ -110,7 +127,7 @@ export function InternalChat() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsOpen(false)}
+                onClick={() => onOpenChange(false)}
                 className="text-primary-foreground hover:bg-primary-foreground/20"
               >
                 <X className="h-5 w-5" />

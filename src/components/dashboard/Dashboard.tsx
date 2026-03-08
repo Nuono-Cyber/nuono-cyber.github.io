@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useInstagramData } from '@/hooks/useInstagramData';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
