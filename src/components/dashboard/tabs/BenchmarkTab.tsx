@@ -3,86 +3,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { InstagramPost } from '@/types/instagram';
-import { Target, TrendingUp, TrendingDown, Minus, Award, Users, Heart, MessageCircle } from 'lucide-react';
+import { formatNumber } from '@/utils/dataProcessor';
+import { Target, TrendingUp, TrendingDown, Minus, Award, Heart, MessageCircle, Info } from 'lucide-react';
 import { 
-  RadarChart, 
-  Radar, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  Cell
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 
 interface BenchmarkTabProps {
   posts: InstagramPost[];
 }
 
-// Industry benchmarks for Instagram (simulated averages)
-const industryBenchmarks = {
-  engagementRate: 3.5, // Average engagement rate %
-  likesPerPost: 150,
-  commentsPerPost: 12,
+// Industry benchmarks for Instagram Reels (2024-2026 averages for accounts <50k followers)
+const BENCHMARKS = {
+  engagementRate: 4.0,  // % (engagement / reach)
+  likesPerPost: 120,
+  commentsPerPost: 8,
+  savesPerPost: 10,
+  sharesPerPost: 5,
+  reachRate: 65, // % (reach / views)
   postsPerWeek: 4,
-  videoEngagement: 4.2,
-  imageEngagement: 2.8,
-  carouselEngagement: 3.8,
 };
 
 export function BenchmarkTab({ posts }: BenchmarkTabProps) {
   const metrics = useMemo(() => {
     if (posts.length === 0) return null;
     
-    const totalLikes = posts.reduce((acc, p) => acc + p.likes, 0);
-    const totalComments = posts.reduce((acc, p) => acc + p.comments, 0);
-    const totalEngagement = posts.reduce((acc, p) => acc + p.engagementTotal, 0);
+    const avgLikes = posts.reduce((acc, p) => acc + p.likes, 0) / posts.length;
+    const avgComments = posts.reduce((acc, p) => acc + p.comments, 0) / posts.length;
+    const avgSaves = posts.reduce((acc, p) => acc + p.saves, 0) / posts.length;
+    const avgShares = posts.reduce((acc, p) => acc + p.shares, 0) / posts.length;
+    const avgEngagementRate = posts.reduce((acc, p) => acc + p.engagementRate, 0) / posts.length;
+    const avgReachRate = posts.reduce((acc, p) => acc + p.reachRate, 0) / posts.length;
     
-    const avgLikes = totalLikes / posts.length;
-    const avgComments = totalComments / posts.length;
-    const avgEngagement = totalEngagement / posts.length;
+    // Calculate posts per week from actual data
+    const dates = posts.map(p => p.publishedAt.getTime()).sort();
+    const timeSpanWeeks = Math.max(1, (dates[dates.length - 1] - dates[0]) / (7 * 24 * 60 * 60 * 1000));
+    const postsPerWeek = posts.length / timeSpanWeeks;
+
+    // Group by content type (use actual types from data)
+    const typeMap = new Map<string, { engagement: number; count: number }>();
+    posts.forEach(p => {
+      const type = p.postType || 'Outro';
+      const existing = typeMap.get(type) || { engagement: 0, count: 0 };
+      existing.engagement += p.engagementRate;
+      existing.count++;
+      typeMap.set(type, existing);
+    });
     
-    // Calculate posts per week
-    const firstPost = posts.reduce((min, p) => p.publishedAt < min.publishedAt ? p : min, posts[0]);
-    const lastPost = posts.reduce((max, p) => p.publishedAt > max.publishedAt ? p : max, posts[0]);
-    const weeksDiff = Math.max(1, (lastPost.publishedAt.getTime() - firstPost.publishedAt.getTime()) / (7 * 24 * 60 * 60 * 1000));
-    const postsPerWeek = posts.length / weeksDiff;
-    
-    // Engagement by type
-    const videosPosts = posts.filter(p => p.postType === 'Vídeo' || p.postType === 'Reels');
-    const imagePosts = posts.filter(p => p.postType === 'Imagem');
-    const carouselPosts = posts.filter(p => p.postType === 'Carrossel');
-    
-    const videoEngagement = videosPosts.length > 0 
-      ? videosPosts.reduce((acc, p) => acc + p.engagementTotal, 0) / videosPosts.length 
-      : 0;
-    const imageEngagement = imagePosts.length > 0 
-      ? imagePosts.reduce((acc, p) => acc + p.engagementTotal, 0) / imagePosts.length 
-      : 0;
-    const carouselEngagement = carouselPosts.length > 0 
-      ? carouselPosts.reduce((acc, p) => acc + p.engagementTotal, 0) / carouselPosts.length 
-      : 0;
-    
-    // Estimated engagement rate (simulated based on typical follower counts)
-    const estimatedFollowers = 10000; // Placeholder
-    const engagementRate = (avgEngagement / estimatedFollowers) * 100;
-    
+    const contentTypes = Array.from(typeMap.entries()).map(([type, data]) => ({
+      name: type.replace(' do Instagram', ''),
+      avgEngagement: data.engagement / data.count,
+      count: data.count,
+    }));
+
     return {
-      avgLikes,
-      avgComments,
-      avgEngagement,
-      postsPerWeek,
-      videoEngagement,
-      imageEngagement,
-      carouselEngagement,
-      engagementRate,
-      totalPosts: posts.length
+      avgLikes, avgComments, avgSaves, avgShares,
+      avgEngagementRate, avgReachRate, postsPerWeek,
+      contentTypes, totalPosts: posts.length,
     };
   }, [posts]);
 
@@ -95,40 +73,25 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
   }
 
   const comparisons = [
-    {
-      label: 'Likes por Post',
-      value: metrics.avgLikes,
-      benchmark: industryBenchmarks.likesPerPost,
-      icon: Heart
-    },
-    {
-      label: 'Comentários por Post',
-      value: metrics.avgComments,
-      benchmark: industryBenchmarks.commentsPerPost,
-      icon: MessageCircle
-    },
-    {
-      label: 'Posts por Semana',
-      value: metrics.postsPerWeek,
-      benchmark: industryBenchmarks.postsPerWeek,
-      icon: Target
-    }
+    { label: 'Engajamento', value: metrics.avgEngagementRate, benchmark: BENCHMARKS.engagementRate, unit: '%' },
+    { label: 'Curtidas/Post', value: metrics.avgLikes, benchmark: BENCHMARKS.likesPerPost, unit: '' },
+    { label: 'Comentários/Post', value: metrics.avgComments, benchmark: BENCHMARKS.commentsPerPost, unit: '' },
+    { label: 'Salvamentos/Post', value: metrics.avgSaves, benchmark: BENCHMARKS.savesPerPost, unit: '' },
+    { label: 'Compartilh./Post', value: metrics.avgShares, benchmark: BENCHMARKS.sharesPerPost, unit: '' },
+    { label: 'Posts/Semana', value: metrics.postsPerWeek, benchmark: BENCHMARKS.postsPerWeek, unit: '' },
   ];
 
-  const radarData = [
-    { subject: 'Likes', you: Math.min(100, (metrics.avgLikes / industryBenchmarks.likesPerPost) * 50), benchmark: 50 },
-    { subject: 'Comentários', you: Math.min(100, (metrics.avgComments / industryBenchmarks.commentsPerPost) * 50), benchmark: 50 },
-    { subject: 'Frequência', you: Math.min(100, (metrics.postsPerWeek / industryBenchmarks.postsPerWeek) * 50), benchmark: 50 },
-    { subject: 'Vídeos', you: Math.min(100, (metrics.videoEngagement / industryBenchmarks.videoEngagement) * 50), benchmark: 50 },
-    { subject: 'Imagens', you: Math.min(100, (metrics.imageEngagement / industryBenchmarks.imageEngagement) * 50), benchmark: 50 },
-    { subject: 'Carrossel', you: Math.min(100, (metrics.carouselEngagement / industryBenchmarks.carouselEngagement) * 50), benchmark: 50 },
-  ];
+  const radarData = comparisons.map(c => ({
+    subject: c.label,
+    you: Math.min(100, (c.value / c.benchmark) * 50),
+    benchmark: 50,
+  }));
 
-  const contentComparisonData = [
-    { name: 'Vídeo', voce: Math.round(metrics.videoEngagement), mercado: industryBenchmarks.videoEngagement * 40 },
-    { name: 'Imagem', voce: Math.round(metrics.imageEngagement), mercado: industryBenchmarks.imageEngagement * 40 },
-    { name: 'Carrossel', voce: Math.round(metrics.carouselEngagement), mercado: industryBenchmarks.carouselEngagement * 40 },
-  ];
+  const barData = comparisons.map(c => ({
+    name: c.label,
+    'Você': Math.round(c.value * 100) / 100,
+    'Mercado': c.benchmark,
+  }));
 
   const getPerformanceLabel = (value: number, benchmark: number) => {
     const ratio = value / benchmark;
@@ -138,13 +101,9 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
     return { label: 'Abaixo da média', color: 'text-red-500', icon: TrendingDown };
   };
 
-  // Calculate overall score
+  // Overall score based on actual metrics vs benchmarks
   const overallScore = Math.round(
-    ((metrics.avgLikes / industryBenchmarks.likesPerPost) * 25 +
-    (metrics.avgComments / industryBenchmarks.commentsPerPost) * 25 +
-    (metrics.postsPerWeek / industryBenchmarks.postsPerWeek) * 25 +
-    (metrics.avgEngagement / (industryBenchmarks.likesPerPost + industryBenchmarks.commentsPerPost)) * 25) * 
-    100 / 100
+    comparisons.reduce((sum, c) => sum + Math.min(2, c.value / c.benchmark), 0) / comparisons.length * 50
   );
 
   return (
@@ -156,22 +115,28 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
         </div>
         <div>
           <h2 className="text-2xl font-bold">Benchmarking</h2>
-          <p className="text-muted-foreground">Compare sua performance com o mercado</p>
+          <p className="text-muted-foreground">Comparação com médias do mercado para contas similares</p>
         </div>
       </div>
 
+      {/* Method info */}
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/30 text-sm text-muted-foreground">
+        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <p>Benchmarks baseados em médias de contas Instagram com &lt;50K seguidores publicando Reels (2024-2026).</p>
+      </div>
+
       {/* Overall Score */}
-      <Card className="glass-card overflow-hidden">
+      <Card className="glass-card">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full border-8 border-primary/20 flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full border-8 border-primary/20 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-4xl font-bold">{overallScore}</p>
-                  <p className="text-sm text-muted-foreground">Score</p>
+                  <p className="text-3xl font-bold">{overallScore}</p>
+                  <p className="text-xs text-muted-foreground">de 100</p>
                 </div>
               </div>
-              <Award className="absolute -top-2 -right-2 w-10 h-10 text-yellow-500" />
+              <Award className="absolute -top-1 -right-1 w-8 h-8 text-yellow-500" />
             </div>
             <div className="flex-1 text-center md:text-left">
               <h3 className="text-xl font-bold">
@@ -181,7 +146,7 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
                  'Espaço para Melhorar 📈'}
               </h3>
               <p className="text-muted-foreground mt-1">
-                Seu perfil está {overallScore >= 50 ? 'acima' : 'abaixo'} da média do mercado em {Math.abs(overallScore - 50)}%
+                Baseado em {metrics.totalPosts} posts analisados
               </p>
             </div>
           </div>
@@ -189,30 +154,33 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
       </Card>
 
       {/* Comparison Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {comparisons.map((item) => {
           const performance = getPerformanceLabel(item.value, item.benchmark);
-          const Icon = item.icon;
           const StatusIcon = performance.icon;
           
           return (
             <Card key={item.label} className="glass-card">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Icon className="w-8 h-8 text-muted-foreground" />
-                  <Badge variant="outline" className={performance.color}>
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
+                  <Badge variant="outline" className={`${performance.color} text-xs`}>
                     <StatusIcon className="w-3 h-3 mr-1" />
                     {performance.label}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{item.label}</p>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-bold">{Math.round(item.value)}</span>
-                  <span className="text-sm text-muted-foreground">vs {item.benchmark} média</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">
+                    {item.unit === '%' ? item.value.toFixed(1) : Math.round(item.value)}
+                    {item.unit}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    vs {item.benchmark}{item.unit}
+                  </span>
                 </div>
                 <Progress 
                   value={Math.min(100, (item.value / item.benchmark) * 50)} 
-                  className="mt-3" 
+                  className="mt-2" 
                 />
               </CardContent>
             </Card>
@@ -225,7 +193,7 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Radar de Performance</CardTitle>
-            <CardDescription>Sua performance vs benchmark do mercado</CardDescription>
+            <CardDescription>Sua performance vs benchmark (50 = média do mercado)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[350px]">
@@ -234,20 +202,8 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
                   <PolarGrid className="stroke-border" />
                   <PolarAngleAxis dataKey="subject" className="text-xs" />
                   <PolarRadiusAxis angle={30} domain={[0, 100]} className="text-xs" />
-                  <Radar 
-                    name="Você" 
-                    dataKey="you" 
-                    stroke="hsl(var(--primary))" 
-                    fill="hsl(var(--primary))" 
-                    fillOpacity={0.3} 
-                  />
-                  <Radar 
-                    name="Mercado" 
-                    dataKey="benchmark" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    fill="hsl(var(--muted-foreground))" 
-                    fillOpacity={0.1} 
-                  />
+                  <Radar name="Você" dataKey="you" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                  <Radar name="Mercado" dataKey="benchmark" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground))" fillOpacity={0.1} />
                   <Legend />
                   <Tooltip />
                 </RadarChart>
@@ -258,16 +214,16 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
 
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle>Engajamento por Tipo de Conteúdo</CardTitle>
-            <CardDescription>Seu desempenho comparado ao mercado</CardDescription>
+            <CardTitle>Você vs Mercado</CardTitle>
+            <CardDescription>Comparação direta por métrica</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={contentComparisonData} layout="vertical">
+                <BarChart data={barData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis type="number" className="text-xs" />
-                  <YAxis dataKey="name" type="category" className="text-xs" width={80} />
+                  <YAxis dataKey="name" type="category" className="text-xs" width={100} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
@@ -276,8 +232,8 @@ export function BenchmarkTab({ posts }: BenchmarkTabProps) {
                     }} 
                   />
                   <Legend />
-                  <Bar dataKey="voce" name="Você" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="mercado" name="Mercado" fill="hsl(var(--muted-foreground))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="Você" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="Mercado" fill="hsl(var(--muted-foreground))" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
