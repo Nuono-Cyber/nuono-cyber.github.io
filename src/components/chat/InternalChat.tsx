@@ -77,7 +77,7 @@ export function InternalChat() {
       <Button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed z-50 bottom-6 right-4 sm:bottom-24 sm:right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-transform',
+          'fixed z-50 bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-transform',
           isOpen && 'hidden'
         )}
       >
