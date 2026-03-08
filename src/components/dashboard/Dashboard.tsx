@@ -90,7 +90,8 @@ export function Dashboard() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background relative">
+        <Snowfall />
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="flex-1 flex flex-col min-w-0">
