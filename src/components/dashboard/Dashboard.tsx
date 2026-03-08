@@ -110,7 +110,8 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <WeatherToggle effect={weatherEffect} onEffectChange={setWeatherEffect} />
                 <div className="hidden md:flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] font-normal gap-1.5 py-1">
                     <Instagram className="w-3 h-3" />
