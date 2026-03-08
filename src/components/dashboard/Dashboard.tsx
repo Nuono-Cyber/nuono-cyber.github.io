@@ -3,7 +3,7 @@ import { useInstagramData } from '@/hooks/useInstagramData';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { Snowfall } from './Snowfall';
+import { WeatherBackground, WeatherToggle } from './WeatherBackground';
 import { OverviewTab } from './tabs/OverviewTab';
 import { EngagementTab } from './tabs/EngagementTab';
 import { TemporalTab } from './tabs/TemporalTab';
@@ -38,6 +38,7 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [chatBotOpen, setChatBotOpen] = useState(false);
   const [internalChatOpen, setInternalChatOpen] = useState(false);
+  const [weatherEffect, setWeatherEffect] = useState<'snow' | 'rain' | 'none'>('snow');
 
   if (isLoading) {
     return (
@@ -91,7 +92,7 @@ export function Dashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background relative">
-        <Snowfall />
+        <WeatherBackground effect={weatherEffect} onEffectChange={setWeatherEffect} />
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -109,7 +110,8 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <WeatherToggle effect={weatherEffect} onEffectChange={setWeatherEffect} />
                 <div className="hidden md:flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] font-normal gap-1.5 py-1">
                     <Instagram className="w-3 h-3" />
