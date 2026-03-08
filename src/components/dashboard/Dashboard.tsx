@@ -38,6 +38,7 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [chatBotOpen, setChatBotOpen] = useState(false);
   const [internalChatOpen, setInternalChatOpen] = useState(false);
+  const [weatherEffect, setWeatherEffect] = useState<'snow' | 'rain' | 'none'>('snow');
 
   if (isLoading) {
     return (
