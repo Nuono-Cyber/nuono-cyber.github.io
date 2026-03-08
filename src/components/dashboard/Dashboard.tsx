@@ -3,7 +3,7 @@ import { useInstagramData } from '@/hooks/useInstagramData';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { Snowfall } from './Snowfall';
+import { WeatherBackground, WeatherToggle } from './WeatherBackground';
 import { OverviewTab } from './tabs/OverviewTab';
 import { EngagementTab } from './tabs/EngagementTab';
 import { TemporalTab } from './tabs/TemporalTab';
