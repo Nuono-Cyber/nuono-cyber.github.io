@@ -87,7 +87,11 @@ export function OverviewTab({ posts, summary }: OverviewTabProps) {
         <MetricCard
           title="Total de Posts"
           value={summary.totalPosts}
-          subtitle={`${(summary.totalPosts / 16).toFixed(1)} posts/dia`}
+          subtitle={(() => {
+            const dates = new Set(posts.map(p => p.publishedAt.toISOString().split('T')[0]));
+            const days = Math.max(1, dates.size);
+            return `${(summary.totalPosts / days).toFixed(1)} posts/dia`;
+          })()}
           icon={TrendingUp}
           iconColor="text-primary"
         />
