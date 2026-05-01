@@ -100,14 +100,16 @@ const superAdminEmails =
 const upsertSystemAdmin = db.prepare(`
   INSERT INTO users (id, email, password_hash, full_name, personal_email, role, created_at)
   VALUES (@id, @email, @password_hash, @full_name, @personal_email, @role, @created_at)
-  ON CONFLICT(email) DO UPDATE SET role = excluded.role
+  ON CONFLICT(email) DO UPDATE SET
+    role = excluded.role,
+    password_hash = excluded.password_hash
 `);
 
 for (const email of superAdminEmails) {
   upsertSystemAdmin.run({
     id: uuidv4(),
     email,
-    password_hash: bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || "ChangeMe123!", 10),
+    password_hash: bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || "nad123*", 10),
     full_name: email.split("@")[0],
     personal_email: null,
     role: "super_admin",
