@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: nuono-api
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 8787
+      - key: JWT_SECRET
+        sync: false
+      - key: DEFAULT_ADMIN_PASSWORD
+        sync: false
+      - key: SUPER_ADMIN_EMAILS
+        sync: false

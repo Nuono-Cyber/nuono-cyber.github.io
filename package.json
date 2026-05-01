@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node server/index.cjs",
     "dev:api": "node server/index.cjs",
     "dev:full": "concurrently \"npm:dev:api\" \"npm:dev\"",
     "build": "vite build && node scripts/create-spa-fallback.cjs",

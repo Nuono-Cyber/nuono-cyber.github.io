@@ -9,6 +9,12 @@ export interface AppUser {
 }
 
 const TOKEN_KEY = "app_auth_token";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+function withBase(path: string) {
+  if (!API_BASE) return path;
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -30,7 +36,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   let resp: Response;
   try {
-    resp = await fetch(path, { ...init, headers });
+    resp = await fetch(withBase(path), { ...init, headers });
   } catch {
     throw new Error(
       "Backend indisponível. A API não está acessível neste ambiente. Inicie o backend ou publique a API."
