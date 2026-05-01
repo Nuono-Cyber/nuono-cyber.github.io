@@ -28,7 +28,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const resp = await fetch(path, { ...init, headers });
+  let resp: Response;
+  try {
+    resp = await fetch(path, { ...init, headers });
+  } catch {
+    throw new Error(
+      "Backend indisponível. A API não está acessível neste ambiente. Inicie o backend ou publique a API."
+    );
+  }
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
     throw new Error(data.error || "Erro na requisição");
