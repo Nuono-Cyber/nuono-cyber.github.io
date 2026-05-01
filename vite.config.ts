@@ -5,9 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // use relative paths so that the app works both on root domains and
-  // sub‑paths (GitHub Pages, custom domains, etc.)
-  base: './',
+  // GitHub Pages serves this project at the domain root. Absolute asset paths
+  // keep SPA fallback pages working for deep links such as /admin/invites.
+  base: '/',
   server: {
     host: "::",
     port: 8080,
