@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
-import { parseCSVData, parseXLSXData } from '@/utils/dataProcessor';
+import { parseCSVData } from '@/utils/dataProcessor';
 import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
@@ -131,30 +131,14 @@ export function useInstagramData() {
         const instagramPosts = data.map(dbPostToInstagramPost);
         setPosts(instagramPosts);
       } else {
-        // If no data in DB, try to load from CSV file as initial seed
-        await loadFromCSVFile();
+        setPosts([]);
       }
       setError(null);
     } catch (err: any) {
       console.error('Error loading from database:', err);
-      // Fallback to CSV file
-      await loadFromCSVFile();
+      setError('Erro ao carregar dados do Instagram');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Load from CSV file (fallback/initial seed)
-  const loadFromCSVFile = async () => {
-    try {
-      const response = await fetch('/data/instagram-posts.csv');
-      const csvText = await response.text();
-      const parsedPosts = parseCSVData(csvText);
-      setPosts(parsedPosts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()));
-      setError(null);
-    } catch (err) {
-      setError('Erro ao carregar dados do Instagram');
-      console.error(err);
     }
   };
 
@@ -162,18 +146,13 @@ export function useInstagramData() {
     loadFromDatabase();
   }, []);
 
-  const addUploadedData = async (type: 'csv' | 'xlsx', data: any[]) => {
+  const addUploadedData = async (type: 'csv' | 'sheet', data: any[]) => {
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 
     try {
-      if (type === 'csv') {
-        const csvText = Papa.unparse(data);
-        newPosts = parseCSVData(csvText);
-      } else {
-        // data is array of objects from sheets or parsed xlsx
-        newPosts = parseXLSXData(data as any[]);
-      }
+      const csvText = Papa.unparse(data);
+      newPosts = parseCSVData(csvText);
 
       if (newPosts.length === 0) {
         toast.error('Nenhum registro válido encontrado no arquivo');

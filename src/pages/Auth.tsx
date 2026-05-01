@@ -19,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido').refine(
-  (email) => email.endsWith('@nadenterprise.com'),
+  (email) => email.toLowerCase().endsWith('@nadenterprise.com'),
   'Apenas emails @nadenterprise.com são permitidos'
 );
 
@@ -61,13 +61,10 @@ export default function Auth() {
 
   const validateInviteCode = async (code: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
-        .from('invites')
-        .select('id, code, used_at, expires_at')
-        .eq('code', code.toLowerCase())
-        .is('used_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('validate_invite_code', {
+        _code: code.toLowerCase(),
+        _email: email.toLowerCase(),
+      });
 
       if (error || !data) {
         setError('Código inválido, expirado ou já utilizado');
@@ -130,22 +127,17 @@ export default function Auth() {
         return;
       }
 
-      // Check invite code requirement for non-super admin emails
-      const isSuperAdminEmail = ['gabrielnbn@nadenterprise.com', 'nadsongl@nadenterprise.com'].includes(email);
-      if (!isSuperAdminEmail) {
-        // Validate invite code for regular users
-        const codeResult = inviteCodeSchema.safeParse(inviteCode);
-        if (!codeResult.success) {
-          setError('Código de convite inválido');
-          setIsLoading(false);
-          return;
-        }
+      const codeResult = inviteCodeSchema.safeParse(inviteCode);
+      if (!codeResult.success) {
+        setError('Código de convite inválido');
+        setIsLoading(false);
+        return;
+      }
 
-        const isCodeValid = await validateInviteCode(inviteCode);
-        if (!isCodeValid) {
-          setIsLoading(false);
-          return;
-        }
+      const isCodeValid = await validateInviteCode(inviteCode);
+      if (!isCodeValid) {
+        setIsLoading(false);
+        return;
       }
 
       const redirectUrl = `${window.location.origin}/`;
@@ -158,6 +150,7 @@ export default function Auth() {
           data: {
             full_name: fullName,
             personal_email: personalEmail,
+            invite_code: inviteCode.toLowerCase(),
           },
         },
       });
@@ -170,14 +163,6 @@ export default function Auth() {
         }
         setIsLoading(false);
         return;
-      }
-
-      // Mark invite code as used
-      if (!isSuperAdminEmail && inviteCode) {
-        await supabase
-          .from('invites')
-          .update({ used_at: new Date().toISOString() })
-          .eq('code', inviteCode.toLowerCase());
       }
 
       setSuccess('Conta criada com sucesso! Você será redirecionado...');

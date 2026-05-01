@@ -72,6 +72,17 @@ export function Dashboard() {
   const currentTab = TAB_TITLES[activeTab] || TAB_TITLES.overview;
 
   const renderContent = () => {
+    if (posts.length === 0 && activeTab !== 'data') {
+      return (
+        <div className="rounded-xl border border-border bg-card p-8 text-center">
+          <p className="font-medium text-foreground">Nenhum dado importado</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Importe dados pelo painel administrativo para habilitar as análises.
+          </p>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview': return <OverviewTab posts={posts} summary={summary} />;
       case 'engagement': return <EngagementTab posts={posts} />;

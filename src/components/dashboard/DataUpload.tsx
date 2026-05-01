@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import Papa from 'papaparse';
 
 interface DataUploadProps {
-  onDataUploaded: (type: 'csv' | 'xlsx', data: any[]) => void;
+  onDataUploaded: (type: 'csv' | 'sheet', data: any[]) => void;
   isSaving?: boolean;
   totalRecords?: number;
   onRefresh?: () => void;
@@ -31,7 +32,7 @@ export function DataUpload({
 }: DataUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
-    type: 'csv' | 'xlsx' | null;
+    type: 'csv' | 'sheet' | null;
     status: 'success' | 'error' | null;
     message: string;
   }>({ type: null, status: null, message: '' });
@@ -49,7 +50,6 @@ export function DataUpload({
 
     try {
       const text = await file.text();
-      const Papa = (await import('papaparse')).default;
       const result = Papa.parse(text, { header: true, skipEmptyLines: true });
       const data = result.data;
 
@@ -79,7 +79,7 @@ export function DataUpload({
     }
 
     setIsFetchingSheet(true);
-    setUploadStatus({ type: 'xlsx', status: null, message: '' });
+    setUploadStatus({ type: 'sheet', status: null, message: '' });
 
     try {
       const { data, error } = await supabase.functions.invoke('sheets-sync', {
@@ -90,16 +90,16 @@ export function DataUpload({
       if (!data?.rows) throw new Error('Resposta inválida do serviço');
 
       // Passa os dados como CSV (o hook processa apenas CSV agora)
-      onDataUploaded('csv', data.rows);
+      onDataUploaded('sheet', data.rows);
 
       setUploadStatus({
-        type: 'xlsx',
+        type: 'sheet',
         status: 'success',
         message: `Planilha importada! ${data.count || data.rows.length} registros.`,
       });
     } catch (err: any) {
       console.error('Erro ao buscar planilha:', err);
-      setUploadStatus({ type: 'xlsx', status: 'error', message: err.message || 'Erro desconhecido' });
+      setUploadStatus({ type: 'sheet', status: 'error', message: err.message || 'Erro desconhecido' });
       toast.error('Erro ao importar planilha do Google Sheets');
     } finally {
       setIsFetchingSheet(false);
@@ -126,54 +126,6 @@ export function DataUpload({
             <div>
               <h2 className="text-lg font-semibold">Banco de Dados Cloud</h2>
               <p className="text-sm text-muted-foreground">
-            {/* Google Sheets Import Card */}
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-              <div className="p-6 border-b border-border bg-gradient-to-br from-[hsl(var(--info))]/5 to-transparent">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-[hsl(var(--info))]/10">
-                    <FileText className="w-5 h-5 text-[hsl(var(--info))]" />
-                  </div>
-                  <h3 className="font-semibold">Importar do Google Sheets</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">Informe o ID da planilha e o intervalo (opcional) para buscar os dados.</p>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <Label htmlFor="sheet-id" className="text-sm text-muted-foreground">ID da planilha (entre /d/ e /edit na URL)</Label>
-                  <Input
-                    id="sheet-id"
-                    value={sheetId}
-                    onChange={(e) => setSheetId(e.target.value)}
-                    placeholder="1a2B3cD4eF5GhIjK..."
-                    className="mt-1 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sheet-range" className="text-sm text-muted-foreground">Range (ex.: A:Z ou Sheet1!A:Z)</Label>
-                  <Input
-                    id="sheet-range"
-                    value={sheetRange}
-                    onChange={(e) => setSheetRange(e.target.value)}
-                    placeholder="A:Z"
-                    className="mt-1 rounded-xl"
-                  />
-                </div>
-                <Button
-                  onClick={handleFetchSheet}
-                  disabled={isProcessing || isFetchingSheet}
-                  className="w-full rounded-xl gap-2"
-                  variant="outline"
-                >
-                  {isFetchingSheet ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {isFetchingSheet ? 'Importando...' : 'Importar do Google Sheets'}
-                </Button>
-              </div>
-            </div>
-
                 {totalRecords > 0 
                   ? `${totalRecords.toLocaleString('pt-BR')} registros armazenados`
                   : 'Nenhum registro armazenado ainda'

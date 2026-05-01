@@ -101,7 +101,7 @@ export default function AdminActivityLogs() {
         return 'secondary';
       case 'upload_csv':
         return 'outline';
-      case 'upload_xlsx':
+      case 'upload_sheet':
         return 'outline';
       default:
         return 'secondary';
@@ -168,7 +168,7 @@ export default function AdminActivityLogs() {
                   <SelectItem value="login">Login</SelectItem>
                   <SelectItem value="logout">Logout</SelectItem>
                   <SelectItem value="upload_csv">Upload CSV</SelectItem>
-                  <SelectItem value="upload_xlsx">Upload XLSX</SelectItem>
+                  <SelectItem value="upload_sheet">Google Sheets</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={dateFilter} onValueChange={setDateFilter}>

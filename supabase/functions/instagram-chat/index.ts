@@ -6,6 +6,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 2000;
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function sanitizeMessages(input: unknown) {
+  if (!Array.isArray(input)) return null;
+
+  const messages = input.slice(-MAX_MESSAGES).map((message) => {
+    if (!message || typeof message !== "object") return null;
+
+    const record = message as Record<string, unknown>;
+    const role = record.role;
+    const content = record.content;
+
+    if (role !== "user" && role !== "assistant") return null;
+    if (typeof content !== "string") return null;
+
+    return {
+      role,
+      content: content.slice(0, MAX_MESSAGE_LENGTH),
+    };
+  });
+
+  if (messages.some((message) => message === null)) return null;
+  return messages;
+}
+
 // Advanced analytics computations on the full dataset
 function computeAdvancedAnalytics(posts: any[]) {
   if (!posts || posts.length === 0) return null;
@@ -321,19 +354,52 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
   try {
-    const { messages } = await req.json();
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || '';
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || '';
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase environment is not configured");
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    const { messages: rawMessages } = await req.json();
+    const messages = sanitizeMessages(rawMessages);
+    if (!messages) {
+      return jsonResponse({ error: "Invalid messages payload" }, 400);
+    }
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || '';
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || '';
-
     console.log("RAG Chat: Fetching all posts from database...");
 
-    // Fetch ALL posts directly from database (RAG approach)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Fetch posts with the caller's JWT so database RLS is enforced.
     const { data: posts, error: dbError } = await supabase
       .from('instagram_posts')
       .select('*')
@@ -348,10 +414,7 @@ serve(async (req) => {
 
     const analytics = computeAdvancedAnalytics(posts || []);
     if (!analytics) {
-      return new Response(JSON.stringify({ error: "Nenhum dado encontrado no banco de dados." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Nenhum dado encontrado no banco de dados." }, 400);
     }
 
     const systemPrompt = buildSystemPrompt(analytics);
@@ -375,23 +438,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }, 429);
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione mais créditos." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Créditos de IA esgotados. Adicione mais créditos." }, 402);
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Erro ao processar sua pergunta" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Erro ao processar sua pergunta" }, 500);
     }
 
     return new Response(response.body, {
@@ -399,9 +453,6 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("Chat function error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: e instanceof Error ? e.message : "Erro desconhecido" }, 500);
   }
 });

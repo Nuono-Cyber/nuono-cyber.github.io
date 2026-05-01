@@ -46,27 +46,14 @@ Se você vir uma tela em branco ao abrir `https://nuono-cyber.github.io`, provav
 
 ## 📈 Gerenciamento de Dados do Instagram
 
-A plataforma suporta upload e análise de dados do Instagram através de arquivos CSV e XLSX, com processamento inteligente e sincronização em tempo real com o banco de dados cloud.
+A plataforma suporta upload e análise de dados do Instagram através de arquivos CSV e importação via Google Sheets, com processamento inteligente e sincronização em tempo real com o banco de dados cloud.
 
 ### Formatos Suportados
 
 | Formato | Status | Funcionalidade |
 |---------|--------|-----------------|
 | CSV | ✅ Ativo | Upload incremental com upsert automático |
-| XLSX | ✅ Ativo | Import com processamento avançado |
-
-### Instalação de Dependências
-
-Para suporte completo a XLSX:
-
-```bash
-chmod +x install-xlsx.sh
-./install-xlsx.sh
-```
-
-Ou manualmente:
-```bash
-npm install xlsx @types/xlsx
+| Google Sheets | ✅ Ativo | Importação via Supabase Function com Service Account |
 
 Google Sheets (Service Account)
 -------------------------------
@@ -74,7 +61,7 @@ Para importar automaticamente dados do Google Sheets usando uma Service Account 
 
 - Adicione a variável de ambiente `GOOGLE_SERVICE_ACCOUNT` no dashboard do Supabase Functions contendo o JSON da service account (stringificada).
 - A função `sheets-sync` foi adicionada em `supabase/functions/sheets-sync` — ela expõe um endpoint que lê `spreadsheetId` e `range` no corpo e retorna as linhas como objetos (usando a primeira linha como cabeçalho).
-- No frontend, use `supabase.functions.invoke('sheets-sync', { body: { action: 'fetch', spreadsheetId, range } })` para buscar os dados e repassar ao processador XLSX.
+- No frontend, use `supabase.functions.invoke('sheets-sync', { body: { action: 'fetch', spreadsheetId, range } })` para buscar os dados e repassar ao processador CSV.
 
 Observação de segurança: nunca comite o JSON da service account no repositório. Prefira armazená-lo como variável de ambiente no Supabase ou em um segredo do CI/CD.
 
@@ -90,7 +77,6 @@ curl -X POST "https://<your-project>.functions.supabase.co/sheets-sync" \
 ```
 
 Você pode criar um agendamento no seu provedor de cron (CRON job), GitHub Actions, ou usar o scheduler do próprio Supabase para chamar essa rota periodicamente.
-```
 
 ### Estrutura de Dados
 
@@ -113,7 +99,7 @@ Os arquivos devem conter as seguintes colunas:
 
 1. Faça login como **Super Admin**
 2. Acesse a aba **"Gerenciar Dados"** no dashboard
-3. Selecione seu arquivo CSV ou XLSX
+3. Selecione seu arquivo CSV ou importe uma planilha Google Sheets
 4. Clique em **Importar**
 5. Os dados serão processados e salvos automaticamente
 

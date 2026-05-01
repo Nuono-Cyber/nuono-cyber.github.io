@@ -15,6 +15,10 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(use
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON public.activity_logs(action);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs(created_at DESC);
 
+DROP POLICY IF EXISTS "Super admins can view all activity logs" ON public.activity_logs;
+DROP POLICY IF EXISTS "Users can insert their own activity logs" ON public.activity_logs;
+DROP POLICY IF EXISTS "Super admins can manage all activity logs" ON public.activity_logs;
+
 -- Policy: Super admins can view all logs
 CREATE POLICY "Super admins can view all activity logs" 
 ON public.activity_logs 

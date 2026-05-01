@@ -40,6 +40,7 @@ function analyzeSentiment(post: InstagramPost): { score: number; label: 'positiv
   ];
 
   // 2. Emoji-based sentiment (more comprehensive)
+  // eslint-disable-next-line no-misleading-character-class
   const positiveEmojis = /[😍🥰😊😄😁🔥💪🎉🏆✨💯👏🙌❤️💖💕🤩😎👍🫶💫⭐🎯🚀]/gu;
   const negativeEmojis = /[😢😭😡😤😠👎💔😩😰🤦😱😕😞😒]/gu;
   const neutralEmojis = /[😅😂🤣🤷😂🤓]/gu;

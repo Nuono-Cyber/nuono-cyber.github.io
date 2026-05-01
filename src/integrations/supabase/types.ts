@@ -244,6 +244,27 @@ export type Database = {
           },
         ]
       }
+      password_reset_attempts: {
+        Row: {
+          corporate_email: string
+          created_at: string
+          id: string
+          ip_address: string
+        }
+        Insert: {
+          corporate_email: string
+          created_at?: string
+          id?: string
+          ip_address: string
+        }
+        Update: {
+          corporate_email?: string
+          created_at?: string
+          id?: string
+          ip_address?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -308,6 +329,13 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      validate_invite_code: {
+        Args: {
+          _code: string
+          _email?: string | null
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "user"

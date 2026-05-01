@@ -107,7 +107,7 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     // Validate email domain
-    if (!email.endsWith('@nadenterprise.com')) {
+    if (!email.toLowerCase().endsWith('@nadenterprise.com')) {
       return { error: { message: 'Apenas emails @nadenterprise.com são permitidos' } };
     }
 
