@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData } from '@/utils/dataProcessor';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/lib/api';
 import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
@@ -120,12 +120,7 @@ export function useInstagramData() {
   const loadFromDatabase = async () => {
     try {
       setIsLoading(true);
-      const { data, error: dbError } = await supabase
-        .from('instagram_posts')
-        .select('*')
-        .order('published_at', { ascending: false });
-
-      if (dbError) throw dbError;
+      const { rows: data } = await api.posts.list();
 
       if (data && data.length > 0) {
         const instagramPosts = data.map(dbPostToInstagramPost);
@@ -165,23 +160,8 @@ export function useInstagramData() {
       
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
-      // Use native Supabase upsert with onConflict for atomic operation
-      const { data: upsertedData, error: upsertError } = await supabase
-        .from('instagram_posts')
-        .upsert(dbRecords, { 
-          onConflict: 'post_id',
-          ignoreDuplicates: false // Update existing records
-        })
-        .select();
-
-      if (upsertError) {
-        console.error('Upsert error:', upsertError);
-        toast.error(`Erro ao salvar: ${upsertError.message}`);
-        setError(upsertError.message);
-        return;
-      }
-
-      const processedCount = upsertedData?.length || dbRecords.length;
+      const upsertResp = await api.posts.upsert(dbRecords);
+      const processedCount = upsertResp.processed || dbRecords.length;
       
       logActivity(`upload_${type}`, { 
         recordsCount: newPosts.length, 

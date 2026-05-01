@@ -1,10 +1,10 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { useAuth, UserRole } from '@/hooks/useAuth';
-import { User, Session } from '@supabase/supabase-js';
+import { AppUser } from '@/lib/api';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
+  session: { token: string } | null;
   role: UserRole | null;
   isLoading: boolean;
   isSuperAdmin: boolean;

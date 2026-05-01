@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,88 +13,32 @@ const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracter
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const token = params.get('token') || '';
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
-
-  useEffect(() => {
-    // Check if we have a valid session from the recovery link
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        setIsValidSession(true);
-      } else {
-        setError('Link de recuperação inválido ou expirado. Solicite um novo link.');
-      }
-      setIsChecking(false);
-    };
-
-    // Listen for auth state changes (when user clicks the recovery link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-        setIsChecking(false);
-      }
-    });
-
-    checkSession();
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-
     try {
-      // Validate password
-      const passwordResult = passwordSchema.safeParse(password);
-      if (!passwordResult.success) {
-        setError(passwordResult.error.errors[0].message);
-        setIsLoading(false);
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('As senhas não coincidem');
-        setIsLoading(false);
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({ password });
-
-      if (error) {
-        setError(error.message);
-        setIsLoading(false);
-        return;
-      }
-
+      if (!token) throw new Error('Link inválido ou expirado.');
+      if (!passwordSchema.safeParse(password).success) throw new Error('Senha deve ter ao menos 6 caracteres');
+      if (password !== confirmPassword) throw new Error('As senhas não coincidem');
+      await api.auth.confirmReset({ token, password });
       setSuccess(true);
-      
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
+      setTimeout(() => navigate('/auth'), 1500);
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar senha');
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -110,81 +54,35 @@ export default function ResetPassword() {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Redefinir Senha</CardTitle>
-            <CardDescription>
-              Crie uma nova senha para sua conta
-            </CardDescription>
+            <CardDescription>Defina uma nova senha para sua conta</CardDescription>
           </CardHeader>
           <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
+            {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
             {success ? (
               <Alert className="border-green-500 text-green-700 bg-green-50">
                 <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Senha atualizada com sucesso! Redirecionando...
-                </AlertDescription>
+                <AlertDescription>Senha atualizada com sucesso!</AlertDescription>
               </Alert>
-            ) : isValidSession ? (
+            ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">Nova Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      minLength={6}
-                    />
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10" minLength={6} required />
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      minLength={6}
-                    />
+                    <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10" minLength={6} required />
                   </div>
                 </div>
-
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Atualizando...
-                    </>
-                  ) : (
-                    'Atualizar Senha'
-                  )}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Atualizando...</> : 'Atualizar Senha'}
                 </Button>
               </form>
-            ) : (
-              <div className="text-center space-y-4">
-                <p className="text-muted-foreground">
-                  O link de recuperação é inválido ou expirou.
-                </p>
-                <Button onClick={() => navigate('/auth')} variant="outline">
-                  Voltar para Login
-                </Button>
-              </div>
             )}
           </CardContent>
         </Card>
