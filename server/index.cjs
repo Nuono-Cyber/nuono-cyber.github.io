@@ -2,14 +2,68 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const { db, uuidv4 } = require("./db.cjs");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
-const JWT_SECRET = process.env.JWT_SECRET || "dev-only-secret";
+const isProduction = process.env.NODE_ENV === "production";
+const configuredJwtSecret = (process.env.JWT_SECRET || "").trim();
+const JWT_SECRET = configuredJwtSecret || (isProduction ? "" : "dev-only-secret");
 
-app.use(cors());
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required in production.");
+}
+
+if (!configuredJwtSecret && !isProduction) {
+  console.warn("[auth] JWT_SECRET not set; using development fallback secret.");
+}
+
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const defaultOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://nuono-cyber.github.io",
+];
+const allowedOrigins = new Set(configuredOrigins.length > 0 ? configuredOrigins : defaultOrigins);
+const exposeResetLink =
+  !isProduction || String(process.env.EXPOSE_RESET_LINK || "").toLowerCase() === "true";
+
+app.set("trust proxy", 1);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Origin not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json({ limit: "2mb" }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+});
+
+const inviteValidationLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas validações de convite. Tente novamente em alguns minutos." },
+});
 
 function createToken(user) {
   return jwt.sign(
@@ -44,7 +98,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", authLimiter, (req, res) => {
   const email = String(req.body?.email || "").toLowerCase().trim();
   const password = String(req.body?.password || "");
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
@@ -58,7 +112,7 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
-app.post("/api/invites/validate", (req, res) => {
+app.post("/api/invites/validate", inviteValidationLimiter, (req, res) => {
   const code = String(req.body?.code || "").toLowerCase().trim();
   const email = String(req.body?.email || "").toLowerCase().trim();
   const invite = db
@@ -69,7 +123,7 @@ app.post("/api/invites/validate", (req, res) => {
   return res.json({ valid: true });
 });
 
-app.post("/api/auth/signup", (req, res) => {
+app.post("/api/auth/signup", authLimiter, (req, res) => {
   const email = String(req.body?.email || "").toLowerCase().trim();
   const password = String(req.body?.password || "");
   const fullName = req.body?.fullName ? String(req.body.fullName) : null;
@@ -108,7 +162,7 @@ app.get("/api/auth/session", authRequired, (req, res) => {
   res.json({ user: { ...user, isSuperAdmin: user.role === "super_admin" } });
 });
 
-app.post("/api/auth/password-reset/request", (req, res) => {
+app.post("/api/auth/password-reset/request", authLimiter, (req, res) => {
   const corporateEmail = String(req.body?.corporateEmail || "").toLowerCase().trim();
   const personalEmail = String(req.body?.personalEmail || "").toLowerCase().trim();
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(corporateEmail);
@@ -122,10 +176,14 @@ app.post("/api/auth/password-reset/request", (req, res) => {
     INSERT INTO password_reset_tokens (id, user_id, token, created_at, expires_at, used_at)
     VALUES (?, ?, ?, ?, ?, NULL)
   `).run(uuidv4(), user.id, token, now, expiresAt);
-  res.json({ ok: true, resetLink: `/auth/reset-password?token=${token}` });
+  const response = { ok: true };
+  if (exposeResetLink) {
+    response.resetLink = `/auth/reset-password?token=${token}`;
+  }
+  res.json(response);
 });
 
-app.post("/api/auth/password-reset/confirm", (req, res) => {
+app.post("/api/auth/password-reset/confirm", authLimiter, (req, res) => {
   const token = String(req.body?.token || "");
   const password = String(req.body?.password || "");
   if (password.length < 6) return res.status(400).json({ error: "Senha muito curta" });
@@ -208,14 +266,20 @@ app.get("/api/admin/invites", authRequired, superAdminRequired, (_req, res) => {
 
 app.post("/api/admin/invites", authRequired, superAdminRequired, (req, res) => {
   const now = new Date();
-  const code = String(req.body?.code || "").toLowerCase();
+  const code = String(req.body?.code || "").toLowerCase().trim();
+  if (!/^[a-f0-9]{10}$/.test(code)) {
+    return res.status(400).json({ error: "Código inválido. Use 10 caracteres hexadecimais." });
+  }
+
+  const inviteEmail = req.body?.email ? String(req.body.email).toLowerCase().trim() : null;
+  const personalEmail = req.body?.personalEmail ? String(req.body.personalEmail).toLowerCase().trim() : null;
   const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const row = {
     id: uuidv4(),
     token: uuidv4(),
     code,
-    email: req.body?.email || null,
-    personal_email: req.body?.personalEmail || null,
+    email: inviteEmail,
+    personal_email: personalEmail,
     created_at: now.toISOString(),
     expires_at: expiresAt,
     used_at: null,

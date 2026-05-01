@@ -9,7 +9,17 @@ export interface AppUser {
 }
 
 const TOKEN_KEY = "app_auth_token";
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
+const GITHUB_PAGES_DEFAULT_API = "https://nuono-api.onrender.com";
+
+function getDefaultApiBase() {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname.toLowerCase();
+  if (host === GITHUB_PAGES_HOST) return GITHUB_PAGES_DEFAULT_API;
+  return "";
+}
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || getDefaultApiBase()).replace(/\/+$/, "");
 
 function withBase(path: string) {
   if (!API_BASE) return path;

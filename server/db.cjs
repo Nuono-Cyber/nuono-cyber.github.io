@@ -97,23 +97,41 @@ const configuredSuperAdmins = (process.env.SUPER_ADMIN_EMAILS || "")
 const superAdminEmails =
   configuredSuperAdmins.length > 0 ? configuredSuperAdmins : defaultSuperAdminEmails;
 
+const isProduction = process.env.NODE_ENV === "production";
+const configuredAdminPassword = (process.env.DEFAULT_ADMIN_PASSWORD || "").trim();
+const forcePasswordReset =
+  String(process.env.FORCE_RESET_SUPER_ADMIN_PASSWORD || "").toLowerCase() === "true";
+const initialAdminPassword = configuredAdminPassword || (isProduction ? "" : "nad123*");
+
+if (!initialAdminPassword) {
+  throw new Error("DEFAULT_ADMIN_PASSWORD is required in production.");
+}
+
+if (!configuredAdminPassword && !isProduction) {
+  console.warn("[auth] DEFAULT_ADMIN_PASSWORD not set; using development fallback password.");
+}
+
 const upsertSystemAdmin = db.prepare(`
   INSERT INTO users (id, email, password_hash, full_name, personal_email, role, created_at)
   VALUES (@id, @email, @password_hash, @full_name, @personal_email, @role, @created_at)
   ON CONFLICT(email) DO UPDATE SET
     role = excluded.role,
-    password_hash = excluded.password_hash
+    password_hash = CASE
+      WHEN @force_password_reset = 1 THEN excluded.password_hash
+      ELSE users.password_hash
+    END
 `);
 
 for (const email of superAdminEmails) {
   upsertSystemAdmin.run({
     id: uuidv4(),
     email,
-    password_hash: bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || "nad123*", 10),
+    password_hash: bcrypt.hashSync(initialAdminPassword, 10),
     full_name: email.split("@")[0],
     personal_email: null,
     role: "super_admin",
     created_at: new Date().toISOString(),
+    force_password_reset: forcePasswordReset ? 1 : 0,
   });
 }
 
