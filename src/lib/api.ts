@@ -12,6 +12,18 @@ const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
 const GITHUB_PAGES_DEFAULT_API = "https://nuono-api.onrender.com";
 
+function getAuthBypassEnabled() {
+  const raw = String(import.meta.env.VITE_DISABLE_LOGIN || "").toLowerCase();
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (typeof window !== "undefined" && window.location.hostname.toLowerCase() === GITHUB_PAGES_HOST) {
+    return true;
+  }
+  return false;
+}
+
+export const AUTH_BYPASS_ENABLED = getAuthBypassEnabled();
+
 function getDefaultApiBase() {
   if (typeof window === "undefined") return "";
   const host = window.location.hostname.toLowerCase();

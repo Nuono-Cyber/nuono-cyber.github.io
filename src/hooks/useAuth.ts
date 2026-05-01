@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, AppUser, UserRole } from '@/lib/api';
+import { api, AppUser, UserRole, AUTH_BYPASS_ENABLED } from '@/lib/api';
 import { logActivity } from '@/utils/activityLogger';
 
 interface AuthState {
@@ -9,6 +9,14 @@ interface AuthState {
   isLoading: boolean;
   isSuperAdmin: boolean;
 }
+
+const DEMO_USER: AppUser = {
+  id: 'demo-super-admin',
+  email: 'demo@nadenterprise.com',
+  role: 'super_admin',
+  full_name: 'Demo Admin',
+  isSuperAdmin: true,
+};
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -20,6 +28,17 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    if (AUTH_BYPASS_ENABLED) {
+      setAuthState({
+        user: DEMO_USER,
+        session: { token: 'demo-session-token' },
+        role: DEMO_USER.role,
+        isSuperAdmin: true,
+        isLoading: false,
+      });
+      return;
+    }
+
     const token = api.getToken();
     if (!token) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -42,6 +61,17 @@ export function useAuth() {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (AUTH_BYPASS_ENABLED) {
+      setAuthState({
+        user: DEMO_USER,
+        session: { token: 'demo-session-token' },
+        role: DEMO_USER.role,
+        isSuperAdmin: true,
+        isLoading: false,
+      });
+      return { error: null };
+    }
+
     try {
       const { token, user } = await api.auth.login(email, password);
       api.setToken(token);
@@ -60,6 +90,10 @@ export function useAuth() {
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    if (AUTH_BYPASS_ENABLED) {
+      return { error: null };
+    }
+
     // Validate email domain
     if (!email.toLowerCase().endsWith('@nadenterprise.com')) {
       return { error: { message: 'Apenas emails @nadenterprise.com são permitidos' } };
@@ -74,6 +108,17 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    if (AUTH_BYPASS_ENABLED) {
+      setAuthState({
+        user: DEMO_USER,
+        session: { token: 'demo-session-token' },
+        role: DEMO_USER.role,
+        isLoading: false,
+        isSuperAdmin: true,
+      });
+      return { error: null };
+    }
+
     await logActivity('logout');
     api.clearToken();
     setAuthState({
@@ -87,6 +132,10 @@ export function useAuth() {
   };
 
   const resetPassword = async (email: string) => {
+    if (AUTH_BYPASS_ENABLED) {
+      return { error: null };
+    }
+
     try {
       await api.auth.requestReset({ corporateEmail: email, personalEmail: '' });
       return { error: null };

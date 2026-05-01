@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { AUTH_BYPASS_ENABLED } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -11,6 +12,10 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requireSuperAdmin = false }: ProtectedRouteProps) {
   const { user, isLoading, isSuperAdmin } = useAuthContext();
   const location = useLocation();
+
+  if (AUTH_BYPASS_ENABLED) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

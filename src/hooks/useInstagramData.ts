@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData } from '@/utils/dataProcessor';
-import { api } from '@/lib/api';
+import { api, AUTH_BYPASS_ENABLED } from '@/lib/api';
 import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
@@ -131,7 +131,12 @@ export function useInstagramData() {
       setError(null);
     } catch (err: any) {
       console.error('Error loading from database:', err);
-      setError('Erro ao carregar dados do Instagram');
+      if (AUTH_BYPASS_ENABLED) {
+        setPosts([]);
+        setError(null);
+      } else {
+        setError('Erro ao carregar dados do Instagram');
+      }
     } finally {
       setIsLoading(false);
     }
