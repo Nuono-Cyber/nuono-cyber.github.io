@@ -15,6 +15,9 @@ const GITHUB_PAGES_DEFAULT_API = "https://nuono-api.onrender.com";
 function getAuthBypassEnabled() {
   const raw = String(import.meta.env.VITE_DISABLE_LOGIN || "").toLowerCase();
   if (raw === "true") return true;
+  if (typeof window !== "undefined" && window.location.hostname.toLowerCase() === GITHUB_PAGES_HOST) {
+    return true;
+  }
   return false;
 }
 
