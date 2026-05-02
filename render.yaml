@@ -1,11 +1,16 @@
 services:
   - type: web
-    name: nuono-api
+    name: nuono-app
     runtime: node
     plan: starter
     rootDir: .
-    buildCommand: npm install
+    buildCommand: npm ci && npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
+    disks:
+      - name: sqlite-data
+        mountPath: /opt/render/project/src/server/data
+        sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 22
@@ -18,7 +23,7 @@ services:
       - key: SUPER_ADMIN_EMAILS
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://nuono-cyber.github.io,http://localhost:5173,http://127.0.0.1:5173
+        value: "*"
       - key: FORCE_RESET_SUPER_ADMIN_PASSWORD
         value: "false"
       - key: EXPOSE_RESET_LINK

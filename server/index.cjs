@@ -3,10 +3,13 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const fs = require("node:fs");
+const path = require("node:path");
 const { db, uuidv4 } = require("./db.cjs");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
+const staticDir = path.join(__dirname, "..", "dist");
 const isProduction = process.env.NODE_ENV === "production";
 const configuredJwtSecret = (process.env.JWT_SECRET || "").trim();
 const JWT_SECRET = configuredJwtSecret || (isProduction ? "" : "dev-only-secret");
@@ -23,6 +26,7 @@ const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowAllOrigins = configuredOrigins.includes("*");
 const defaultOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -37,7 +41,7 @@ app.set("trust proxy", 1);
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (!origin || allowAllOrigins || allowedOrigins.has(origin)) {
         callback(null, true);
         return;
       }
@@ -95,7 +99,29 @@ function superAdminRequired(req, res, next) {
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
+  try {
+    const dbCheck = db.prepare("SELECT 1 as ok").get();
+    const postsCount = db.prepare("SELECT COUNT(*) as count FROM instagram_posts").get().count;
+    const usersCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+    res.json({
+      ok: true,
+      api: "up",
+      db: dbCheck?.ok === 1 ? "up" : "down",
+      stats: {
+        instagram_posts: postsCount,
+        users: usersCount,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      api: "up",
+      db: "down",
+      error: error instanceof Error ? error.message : "Healthcheck failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 app.post("/api/auth/login", authLimiter, (req, res) => {
@@ -377,6 +403,14 @@ app.post("/api/ai/chat", authRequired, (req, res) => {
   res.json({ message: response });
 });
 
+if (fs.existsSync(staticDir)) {
+  app.use(express.static(staticDir));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(staticDir, "index.html"));
+  });
+}
+
 app.listen(PORT, () => {
-  console.log(`API SQLite running on http://localhost:${PORT}`);
+  console.log(`Fullstack app running on http://localhost:${PORT}`);
 });
