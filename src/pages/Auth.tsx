@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Instagram, Loader2, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, AUTH_BYPASS_ENABLED } from '@/lib/api';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido').refine(
@@ -40,6 +40,11 @@ export default function Auth() {
   const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
+    if (AUTH_BYPASS_ENABLED) {
+      navigate('/', { replace: true });
+      return;
+    }
+
     if (user) {
       const from = (location.state as any)?.from?.pathname || '/';
       navigate(from, { replace: true });
