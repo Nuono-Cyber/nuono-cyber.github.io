@@ -8,6 +8,7 @@ import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
 
 const OFFLINE_POSTS_KEY = 'offline_instagram_posts_db';
+const OFFLINE_SEED_FILE = 'data/instagram_posts-export-2026-05-02_09-17-47.csv';
 
 interface DbInstagramPost {
   id: string;
@@ -131,6 +132,47 @@ function saveOfflineDbRecords(records: DbInstagramPost[]) {
   window.localStorage.setItem(OFFLINE_POSTS_KEY, JSON.stringify(records));
 }
 
+async function seedOfflineDbRecordsFromCsv(): Promise<DbInstagramPost[]> {
+  const seedUrl = `${import.meta.env.BASE_URL}${OFFLINE_SEED_FILE}`;
+  const response = await fetch(seedUrl);
+  if (!response.ok) return [];
+
+  const text = await response.text();
+  const parsed = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    skipEmptyLines: true,
+    delimiter: ';',
+  });
+
+  const seeded = parsed.data
+    .map((row) => ({
+      id: row.id || row.post_id || crypto.randomUUID(),
+      post_id: row.post_id || '',
+      account_id: row.account_id || null,
+      username: row.username || null,
+      account_name: row.account_name || null,
+      description: row.description || null,
+      duration: Number(row.duration || 0),
+      published_at: row.published_at || null,
+      permalink: row.permalink || null,
+      post_type: row.post_type || null,
+      views: Number(row.views || 0),
+      reach: Number(row.reach || 0),
+      likes: Number(row.likes || 0),
+      shares: Number(row.shares || 0),
+      follows: Number(row.follows || 0),
+      comments: Number(row.comments || 0),
+      saves: Number(row.saves || 0),
+    }))
+    .filter((row) => row.post_id);
+
+  if (seeded.length > 0) {
+    saveOfflineDbRecords(seeded);
+  }
+
+  return seeded;
+}
+
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,7 +182,10 @@ export function useInstagramData() {
   // Load data from database
   const loadFromDatabase = async () => {
     if (AUTH_BYPASS_ENABLED) {
-      const offlineRecords = loadOfflineDbRecords();
+      let offlineRecords = loadOfflineDbRecords();
+      if (offlineRecords.length === 0) {
+        offlineRecords = await seedOfflineDbRecordsFromCsv();
+      }
       const offlinePosts = offlineRecords.map(dbPostToInstagramPost);
       setPosts(offlinePosts);
       setError(null);
@@ -181,7 +226,7 @@ export function useInstagramData() {
     loadFromDatabase();
   }, []);
 
-  const addUploadedData = async (type: 'csv' | 'sheet', data: any[]) => {
+  const addUploadedData = async (type: 'csv' | 'excel', data: any[]) => {
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 

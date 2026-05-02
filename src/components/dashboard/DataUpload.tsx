@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import Papa from 'papaparse';
 
 interface DataUploadProps {
-  onDataUploaded: (type: 'csv' | 'sheet', data: any[]) => void;
+  onDataUploaded: (type: 'csv' | 'excel', data: any[]) => void;
   isSaving?: boolean;
   totalRecords?: number;
   onRefresh?: () => void;
@@ -18,28 +18,41 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
-  const csvInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
     setMessage(null);
     try {
-      const text = await file.text();
-      const result = Papa.parse(text, { header: true, skipEmptyLines: true });
-      const data = result.data;
-      onDataUploaded('csv', data);
+      const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+      let data: any[] = [];
+
+      if (isExcel) {
+        const XLSX = await import('xlsx');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        if (!firstSheet) throw new Error('Planilha sem abas');
+        data = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
+      } else {
+        const text = await file.text();
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter: '' });
+        data = result.data;
+      }
+
+      onDataUploaded(isExcel ? 'excel' : 'csv', data);
       setIsError(false);
-      setMessage(`CSV processado com ${data.length} registros.`);
+      setMessage(`${isExcel ? 'Excel' : 'CSV'} processado com ${data.length} registros.`);
     } catch (error: any) {
       setIsError(true);
-      setMessage(error.message || 'Erro ao processar CSV');
-      toast.error('Erro ao processar CSV');
+      setMessage(error.message || 'Erro ao processar arquivo');
+      toast.error('Erro ao processar arquivo');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) handleFileUpload(file);
   };
@@ -65,15 +78,22 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
       )}
 
       <div className="rounded-xl border p-4 space-y-3">
-        <Label htmlFor="csv-upload">Importar CSV</Label>
-        <Input id="csv-upload" type="file" accept=".csv" ref={csvInputRef} onChange={handleCSVUpload} disabled={isUploading || isSaving} />
-        <Button onClick={() => csvInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
+        <Label htmlFor="data-upload">Importar CSV ou Excel</Label>
+        <Input
+          id="data-upload"
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          ref={fileInputRef}
+          onChange={handleUpload}
+          disabled={isUploading || isSaving}
+        />
+        <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
           {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-          Enviar CSV
+          Enviar arquivo
         </Button>
         <div className="text-xs text-muted-foreground flex items-center gap-2">
           <FileText className="h-3 w-3" />
-          Integração Google Sheets removida na migração para SQLite.
+          O sistema realiza upsert incremental por post_id no SQLite.
         </div>
       </div>
     </div>

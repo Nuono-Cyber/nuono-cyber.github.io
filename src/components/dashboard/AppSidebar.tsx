@@ -1,9 +1,9 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BarChart3, Clock, FileVideo, Heart,
   TrendingUp, Target, LineChart, Lightbulb, Shield, Activity,
-  Instagram, LogOut, ChevronLeft, Settings, UserPlus
+  Instagram, Settings, UserPlus
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import {
@@ -12,7 +12,6 @@ import {
   SidebarMenuButton, SidebarFooter, SidebarHeader, useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 interface AppSidebarProps {
   activeTab: string;
@@ -38,14 +37,8 @@ const adminItems = [
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const { user, isSuperAdmin, signOut } = useAuthContext();
+  const { user, isSuperAdmin } = useAuthContext();
   const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) { toast.error('Erro ao sair'); }
-    else { toast.success('Até logo!'); navigate('/auth'); }
-  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -168,20 +161,10 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
               </div>
               <ThemeSwitcher />
             </div>
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sair da conta
-            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <ThemeSwitcher />
-            <button onClick={handleSignOut} className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
         )}
       </SidebarFooter>
