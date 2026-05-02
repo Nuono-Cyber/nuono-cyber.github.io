@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData } from '@/utils/dataProcessor';
 import { api, AUTH_BYPASS_ENABLED } from '@/lib/api';
-import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
@@ -195,12 +194,7 @@ export function useInstagramData() {
 
     try {
       setIsLoading(true);
-      const { data, error: dbError } = await supabase
-        .from('instagram_posts')
-        .select('id, post_id, account_id, username, account_name, description, duration, published_at, permalink, post_type, views, reach, likes, shares, follows, comments, saves')
-        .order('published_at', { ascending: false });
-
-      if (dbError) throw dbError;
+      const { rows: data } = await api.posts.list();
 
       if (data && data.length > 0) {
         const instagramPosts = data.map(dbPostToInstagramPost);
@@ -266,13 +260,8 @@ export function useInstagramData() {
       
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
-      const { error: upsertError } = await supabase
-        .from('instagram_posts')
-        .upsert(dbRecords, { onConflict: 'post_id' });
-
-      if (upsertError) throw upsertError;
-
-      const processedCount = dbRecords.length;
+      const upsertResp = await api.posts.upsert(dbRecords);
+      const processedCount = upsertResp.processed || dbRecords.length;
       
       logActivity(`upload_${type}`, { 
         recordsCount: newPosts.length, 
