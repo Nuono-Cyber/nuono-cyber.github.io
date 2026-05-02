@@ -68,10 +68,25 @@ export function parseCSVData(csvText: string): InstagramPost[] {
 
 function parseDate(dateStr: string): Date {
   if (!dateStr) return new Date();
-  const [datePart, timePart] = dateStr.split(' ');
-  const [day, month, year] = datePart.split('/').map(Number);
-  const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-  return new Date(year, month - 1, day, hours, minutes);
+  const normalized = String(dateStr).trim();
+
+  if (!normalized) return new Date();
+
+  // Format: dd/mm/yyyy [hh:mm[:ss]]
+  if (normalized.includes('/')) {
+    const [datePart, timePart] = normalized.split(' ');
+    const [day, month, year] = datePart.split('/').map(Number);
+    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+    const parsed = new Date(year, month - 1, day, hours || 0, minutes || 0);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+
+  // Fallback: let JS parse ISO-like formats (e.g., yyyy-mm-dd hh:mm:ss)
+  const isoLike = normalized.replace(' ', 'T');
+  const parsed = new Date(isoLike);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  return new Date();
 }
 
 function parseNumber(value: any): number {
