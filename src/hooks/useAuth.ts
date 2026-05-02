@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api, AppUser, UserRole, AUTH_BYPASS_ENABLED } from '@/lib/api';
+import { api, AppUser, AUTH_BYPASS_ENABLED } from '@/lib/api';
+export type { UserRole } from '@/lib/api';
 import { logActivity } from '@/utils/activityLogger';
 
 interface AuthState {
