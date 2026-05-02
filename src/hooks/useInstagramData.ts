@@ -6,6 +6,8 @@ import Papa from 'papaparse';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
 
+const OFFLINE_POSTS_KEY = 'offline_instagram_posts_db';
+
 interface DbInstagramPost {
   id: string;
   post_id: string;
@@ -91,6 +93,7 @@ function dbPostToInstagramPost(dbPost: DbInstagramPost): InstagramPost {
 
 function instagramPostToDbFormat(post: InstagramPost) {
   return {
+    id: post.id,
     post_id: post.id,
     account_id: post.accountId || null,
     username: post.username || null,
@@ -110,6 +113,23 @@ function instagramPostToDbFormat(post: InstagramPost) {
   };
 }
 
+function loadOfflineDbRecords(): DbInstagramPost[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(OFFLINE_POSTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOfflineDbRecords(records: DbInstagramPost[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(OFFLINE_POSTS_KEY, JSON.stringify(records));
+}
+
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,6 +138,15 @@ export function useInstagramData() {
 
   // Load data from database
   const loadFromDatabase = async () => {
+    if (AUTH_BYPASS_ENABLED) {
+      const offlineRecords = loadOfflineDbRecords();
+      const offlinePosts = offlineRecords.map(dbPostToInstagramPost);
+      setPosts(offlinePosts);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const { rows: data } = await api.posts.list();
@@ -162,6 +191,27 @@ export function useInstagramData() {
 
       // Convert to database format
       const dbRecords = newPosts.map(instagramPostToDbFormat);
+
+      if (AUTH_BYPASS_ENABLED) {
+        const existing = loadOfflineDbRecords();
+        const mergedByPostId = new Map<string, DbInstagramPost>();
+
+        for (const row of existing) {
+          mergedByPostId.set(row.post_id, row);
+        }
+
+        for (const row of dbRecords) {
+          const id = row.id || row.post_id;
+          mergedByPostId.set(row.post_id, { ...row, id });
+        }
+
+        const merged = Array.from(mergedByPostId.values());
+        saveOfflineDbRecords(merged);
+        setPosts(merged.map(dbPostToInstagramPost));
+        toast.success(`${newPosts.length} registros importados no modo offline!`);
+        setIsSaving(false);
+        return;
+      }
       
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
