@@ -220,7 +220,7 @@ export function useInstagramData() {
     loadFromDatabase();
   }, []);
 
-  const addUploadedData = async (type: 'csv' | 'excel', data: any[]) => {
+  const addUploadedData = async (type: 'csv' | 'excel', data: any[], mode: 'replace' | 'increment' = 'increment') => {
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 
@@ -238,7 +238,7 @@ export function useInstagramData() {
       const dbRecords = newPosts.map(instagramPostToDbFormat);
 
       if (AUTH_BYPASS_ENABLED) {
-        const existing = loadOfflineDbRecords();
+        const existing = mode === 'replace' ? [] : loadOfflineDbRecords();
         const mergedByPostId = new Map<string, DbInstagramPost>();
 
         for (const row of existing) {
@@ -253,22 +253,23 @@ export function useInstagramData() {
         const merged = Array.from(mergedByPostId.values());
         saveOfflineDbRecords(merged);
         setPosts(merged.map(dbPostToInstagramPost));
-        toast.success(`${newPosts.length} registros importados no modo offline!`);
+        toast.success(mode === 'replace' ? `${newPosts.length} registros carregados como amostra!` : `${newPosts.length} registros adicionados no modo incremental!`);
         setIsSaving(false);
         return;
       }
       
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
-      const upsertResp = await api.posts.upsert(dbRecords);
+      const upsertResp = await api.posts.upsert(dbRecords, mode);
       const processedCount = upsertResp.processed || dbRecords.length;
       
       logActivity(`upload_${type}`, { 
         recordsCount: newPosts.length, 
-        processedCount
+        processedCount,
+        mode,
       });
 
-      toast.success(`${processedCount} registros processados com sucesso!`);
+      toast.success(mode === 'replace' ? `${processedCount} registros carregados como nova amostra!` : `${processedCount} registros incrementados com sucesso!`);
       console.log(`Successfully upserted ${processedCount} records`);
 
       // Reload from database to get fresh data

@@ -3,6 +3,13 @@ import { api, AppUser, UserRole, AUTH_BYPASS_ENABLED } from '@/lib/api';
 export type { UserRole };
 import { logActivity } from '@/utils/activityLogger';
 
+type SignInResult = {
+  error: any;
+  requiresPasswordChange?: boolean;
+  resetPath?: string;
+  resetToken?: string;
+};
+
 interface AuthState {
   user: AppUser | null;
   session: { token: string } | null;
@@ -70,11 +77,22 @@ export function useAuth() {
         isSuperAdmin: true,
         isLoading: false,
       });
-      return { error: null };
+      return { error: null } as SignInResult;
     }
 
     try {
-      const { token, user } = await api.auth.login(email, password);
+      const response = await api.auth.login(email, password);
+      if (response.requiresPasswordChange) {
+        api.clearToken();
+        return {
+          error: null,
+          requiresPasswordChange: true,
+          resetPath: response.resetPath,
+          resetToken: response.resetToken,
+        } as SignInResult;
+      }
+
+      const { token, user } = response;
       api.setToken(token);
       setAuthState({
         user,
@@ -84,9 +102,9 @@ export function useAuth() {
         isLoading: false,
       });
       await logActivity('login', { email });
-      return { error: null };
+      return { error: null } as SignInResult;
     } catch (error: any) {
-      return { error };
+      return { error } as SignInResult;
     }
   };
 

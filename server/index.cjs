@@ -69,6 +69,20 @@ const inviteValidationLimiter = rateLimit({
   message: { error: "Muitas validações de convite. Tente novamente em alguns minutos." },
 });
 
+function issuePasswordResetToken(userId) {
+  const token = uuidv4();
+  const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+  db.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL").run(now, userId);
+  db.prepare(`
+    INSERT INTO password_reset_tokens (id, user_id, token, created_at, expires_at, used_at)
+    VALUES (?, ?, ?, ?, ?, NULL)
+  `).run(uuidv4(), userId, token, now, expiresAt);
+
+  return { token, resetPath: `/auth/reset-password?token=${token}&reason=first-access` };
+}
+
 function createToken(user) {
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
@@ -131,8 +145,18 @@ app.post("/api/auth/login", authLimiter, (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: "Email ou senha incorretos" });
   }
+  if (user.must_change_password) {
+    const reset = issuePasswordResetToken(user.id);
+    return res.json({
+      ok: true,
+      requiresPasswordChange: true,
+      resetToken: reset.token,
+      resetPath: reset.resetPath,
+    });
+  }
   const token = createToken(user);
   return res.json({
+    ok: true,
     token,
     user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
   });
@@ -183,7 +207,7 @@ app.post("/api/auth/signup", authLimiter, (req, res) => {
 });
 
 app.get("/api/auth/session", authRequired, (req, res) => {
-  const user = db.prepare("SELECT id, email, role, full_name FROM users WHERE id = ?").get(req.user.sub);
+  const user = db.prepare("SELECT id, email, role, full_name, must_change_password FROM users WHERE id = ?").get(req.user.sub);
   if (!user) return res.status(401).json({ error: "Invalid session" });
   res.json({ user: { ...user, isSuperAdmin: user.role === "super_admin" } });
 });
@@ -217,7 +241,7 @@ app.post("/api/auth/password-reset/confirm", authLimiter, (req, res) => {
     .prepare("SELECT * FROM password_reset_tokens WHERE token = ? AND used_at IS NULL AND expires_at > ?")
     .get(token, new Date().toISOString());
   if (!row) return res.status(400).json({ error: "Token inválido ou expirado" });
-  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(bcrypt.hashSync(password, 10), row.user_id);
+  db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(password, 10), row.user_id);
   db.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE id = ?").run(new Date().toISOString(), row.id);
   res.json({ ok: true });
 });
@@ -229,6 +253,7 @@ app.get("/api/posts", authRequired, (_req, res) => {
 
 app.post("/api/posts/upsert", authRequired, (req, res) => {
   const posts = Array.isArray(req.body?.posts) ? req.body.posts : [];
+  const mode = req.body?.mode === "replace" ? "replace" : "increment";
   const stmt = db.prepare(`
     INSERT INTO instagram_posts (
       id, post_id, account_id, username, account_name, description, duration, published_at, permalink, post_type, views, reach, likes, shares, follows, comments, saves
@@ -252,13 +277,20 @@ app.post("/api/posts/upsert", authRequired, (req, res) => {
       comments=excluded.comments,
       saves=excluded.saves
   `);
-  const tx = db.transaction((items) => {
-    for (const item of items) {
+  try {
+    db.exec("BEGIN");
+    if (mode === "replace") {
+      db.prepare("DELETE FROM instagram_posts").run();
+    }
+    for (const item of posts) {
       stmt.run({ id: item.id || uuidv4(), ...item });
     }
-  });
-  tx(posts);
-  res.json({ ok: true, processed: posts.length });
+    db.exec("COMMIT");
+    res.json({ ok: true, processed: posts.length, mode });
+  } catch (error) {
+    db.exec("ROLLBACK");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Falha ao salvar posts" });
+  }
 });
 
 app.post("/api/activity", authRequired, (req, res) => {

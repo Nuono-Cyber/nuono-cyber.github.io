@@ -60,9 +60,20 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setIsLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const { error, requiresPasswordChange, resetPath } = await signIn(email, password);
+      if (requiresPasswordChange && resetPath) {
+        navigate(resetPath, {
+          replace: true,
+          state: {
+            email,
+            firstAccess: true,
+          },
+        });
+        return;
+      }
       if (error) setError(error.message || 'Erro ao fazer login');
     } finally {
       setIsLoading(false);

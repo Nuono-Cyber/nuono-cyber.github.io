@@ -8,7 +8,7 @@ interface AuthContextType {
   role: UserRole | null;
   isLoading: boolean;
   isSuperAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; requiresPasswordChange?: boolean; resetPath?: string; resetToken?: string }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;

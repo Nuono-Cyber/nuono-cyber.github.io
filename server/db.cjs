@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
   full_name TEXT,
   personal_email TEXT,
   role TEXT NOT NULL DEFAULT 'user',
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  must_change_password INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS invites (
@@ -84,6 +85,11 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 `);
 
+const userColumns = db.prepare("PRAGMA table_info(users)").all();
+if (!userColumns.some((column) => column.name === "must_change_password")) {
+  db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0");
+}
+
 const defaultSuperAdminEmails = [
   "gabrielnbn@nadenterprise.com",
   "nadsongl@nadenterprise.com",
@@ -99,9 +105,11 @@ const superAdminEmails =
 
 const isProduction = process.env.NODE_ENV === "production";
 const configuredAdminPassword = (process.env.DEFAULT_ADMIN_PASSWORD || "").trim();
+const temporarySuperAdminPassword = "nad123*#";
 const forcePasswordReset =
   String(process.env.FORCE_RESET_SUPER_ADMIN_PASSWORD || "").toLowerCase() === "true";
-const initialAdminPassword = configuredAdminPassword || (isProduction ? "" : "nad123*");
+const initialAdminPassword = configuredAdminPassword || (isProduction ? "" : temporarySuperAdminPassword);
+const shouldRequirePasswordChangeOnFirstAccess = initialAdminPassword === temporarySuperAdminPassword;
 
 if (!initialAdminPassword) {
   throw new Error("DEFAULT_ADMIN_PASSWORD is required in production.");
@@ -112,13 +120,17 @@ if (!configuredAdminPassword && !isProduction) {
 }
 
 const upsertSystemAdmin = db.prepare(`
-  INSERT INTO users (id, email, password_hash, full_name, personal_email, role, created_at)
-  VALUES (@id, @email, @password_hash, @full_name, @personal_email, @role, @created_at)
+  INSERT INTO users (id, email, password_hash, full_name, personal_email, role, created_at, must_change_password)
+  VALUES (@id, @email, @password_hash, @full_name, @personal_email, @role, @created_at, @must_change_password)
   ON CONFLICT(email) DO UPDATE SET
     role = excluded.role,
     password_hash = CASE
       WHEN @force_password_reset = 1 THEN excluded.password_hash
       ELSE users.password_hash
+    END,
+    must_change_password = CASE
+      WHEN @force_password_reset = 1 THEN excluded.must_change_password
+      ELSE users.must_change_password
     END
 `);
 
@@ -131,6 +143,7 @@ for (const email of superAdminEmails) {
     personal_email: null,
     role: "super_admin",
     created_at: new Date().toISOString(),
+    must_change_password: shouldRequirePasswordChangeOnFirstAccess || forcePasswordReset ? 1 : 0,
     force_password_reset: forcePasswordReset ? 1 : 0,
   });
 }

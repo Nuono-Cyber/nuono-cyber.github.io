@@ -6,7 +6,24 @@ export interface AppUser {
   role: UserRole;
   full_name?: string | null;
   isSuperAdmin?: boolean;
+  must_change_password?: boolean;
 }
+
+export interface LoginSuccessResponse {
+  ok: true;
+  token: string;
+  user: AppUser;
+  requiresPasswordChange?: false;
+}
+
+export interface LoginPasswordChangeResponse {
+  ok: true;
+  requiresPasswordChange: true;
+  resetToken: string;
+  resetPath: string;
+}
+
+export type LoginResponse = LoginSuccessResponse | LoginPasswordChangeResponse;
 
 const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
@@ -76,7 +93,7 @@ export const api = {
   setToken,
   auth: {
     login: (email: string, password: string) =>
-      request<{ token: string; user: AppUser }>("/api/auth/login", {
+      request<LoginResponse>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
@@ -123,10 +140,10 @@ export const api = {
   },
   posts: {
     list: () => request<{ rows: any[] }>("/api/posts"),
-    upsert: (posts: any[]) =>
-      request<{ ok: boolean; processed: number }>("/api/posts/upsert", {
+    upsert: (posts: any[], mode: "replace" | "increment" = "increment") =>
+      request<{ ok: boolean; processed: number; mode: "replace" | "increment" }>("/api/posts/upsert", {
         method: "POST",
-        body: JSON.stringify({ posts }),
+        body: JSON.stringify({ posts, mode }),
       }),
   },
   activity: {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,11 @@ const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracter
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const token = params.get('token') || '';
+  const reason = params.get('reason') || '';
+  const isFirstAccess = reason === 'first-access' || Boolean((location.state as { firstAccess?: boolean } | null)?.firstAccess);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,15 +56,15 @@ export default function ResetPassword() {
 
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle>Redefinir Senha</CardTitle>
-            <CardDescription>Defina uma nova senha para sua conta</CardDescription>
+            <CardTitle>{isFirstAccess ? 'Defina sua nova senha' : 'Redefinir Senha'}</CardTitle>
+            <CardDescription>{isFirstAccess ? 'O acesso inicial usa a senha temporária nad123*#. Cadastre agora sua senha definitiva.' : 'Defina uma nova senha para sua conta'}</CardDescription>
           </CardHeader>
           <CardContent>
             {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
             {success ? (
               <Alert className="border-green-500 text-green-700 bg-green-50">
                 <CheckCircle className="h-4 w-4" />
-                <AlertDescription>Senha atualizada com sucesso!</AlertDescription>
+                <AlertDescription>{isFirstAccess ? 'Senha cadastrada com sucesso! Faça login com a nova senha.' : 'Senha atualizada com sucesso!'}</AlertDescription>
               </Alert>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">

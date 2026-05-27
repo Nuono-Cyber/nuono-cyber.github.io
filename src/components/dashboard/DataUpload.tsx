@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import Papa from 'papaparse';
 
 interface DataUploadProps {
-  onDataUploaded: (type: 'csv' | 'excel', data: any[]) => void;
+  onDataUploaded: (type: 'csv' | 'excel', data: any[], mode: 'replace' | 'increment') => void;
   isSaving?: boolean;
   totalRecords?: number;
   onRefresh?: () => void;
@@ -18,9 +18,10 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const sampleInputRef = useRef<HTMLInputElement>(null);
+  const incrementInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (file: File, mode: 'replace' | 'increment') => {
     setIsUploading(true);
     setMessage(null);
     try {
@@ -40,9 +41,13 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         data = result.data;
       }
 
-      onDataUploaded(isExcel ? 'excel' : 'csv', data);
+      onDataUploaded(isExcel ? 'excel' : 'csv', data, mode);
       setIsError(false);
-      setMessage(`${isExcel ? 'Excel' : 'CSV'} processado com ${data.length} registros.`);
+      setMessage(
+        mode === 'replace'
+          ? `${isExcel ? 'Excel' : 'CSV'} carregado como amostra com ${data.length} registros.`
+          : `${isExcel ? 'Excel' : 'CSV'} incrementado com ${data.length} registros.`
+      );
     } catch (error: any) {
       setIsError(true);
       setMessage(error.message || 'Erro ao processar arquivo');
@@ -52,9 +57,10 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
     }
   };
 
-  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>, mode: 'replace' | 'increment') => {
     const file = event.target.files?.[0];
-    if (file) handleFileUpload(file);
+    if (file) handleFileUpload(file, mode);
+    event.target.value = '';
   };
 
   return (
@@ -77,23 +83,62 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         </Alert>
       )}
 
-      <div className="rounded-xl border p-4 space-y-3">
-        <Label htmlFor="data-upload">Importar CSV ou Excel</Label>
+      <div className="rounded-xl border p-4 space-y-5">
+        <div>
+          <Label className="text-sm font-medium">Fluxo de importação</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Carregue uma amostra para reiniciar a base analisada ou incremente a análise com novos arquivos.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <div className="font-medium">Analisar amostra</div>
+              <div className="text-xs text-muted-foreground">Substitui a base atual pelos dados do arquivo enviado.</div>
+            </div>
+            <Input
+              id="sample-upload"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              ref={sampleInputRef}
+              onChange={(event) => handleUpload(event, 'replace')}
+              disabled={isUploading || isSaving}
+            />
+            <Button onClick={() => sampleInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full" variant="secondary">
+              {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+              Enviar amostra
+            </Button>
+          </div>
+
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <div className="font-medium">Incrementar análise</div>
+              <div className="text-xs text-muted-foreground">Mantém a base atual e faz upsert incremental por post_id.</div>
+            </div>
+            <Input
+              id="increment-upload"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              ref={incrementInputRef}
+              onChange={(event) => handleUpload(event, 'increment')}
+              disabled={isUploading || isSaving}
+            />
+            <Button onClick={() => incrementInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
+              {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+              Enviar incremento
+            </Button>
+          </div>
+        </div>
+
         <Input
-          id="data-upload"
-          type="file"
-          accept=".csv,.xlsx,.xls"
-          ref={fileInputRef}
-          onChange={handleUpload}
-          disabled={isUploading || isSaving}
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
         />
-        <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
-          {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-          Enviar arquivo
-        </Button>
         <div className="text-xs text-muted-foreground flex items-center gap-2">
           <FileText className="h-3 w-3" />
-          O sistema realiza upsert incremental por post_id no SQLite.
+          O fluxo de amostra reinicia a análise; o incremental adiciona ou atualiza registros existentes por post_id.
         </div>
       </div>
     </div>
