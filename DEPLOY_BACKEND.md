@@ -9,7 +9,8 @@ Este projeto agora precisa de backend para login/cadastro:
 
 1. Conecte o repositório no Render.
 2. Use o arquivo `render.yaml` da raiz.
-3. Configure as variáveis:
+3. Garanta que o build use `npm ci --include=dev && npm run build`, porque o frontend é compilado com `vite` em `devDependencies`.
+4. Configure as variáveis:
    - `JWT_SECRET` (obrigatória)
    - `DEFAULT_ADMIN_PASSWORD` (ex.: `nad123*`)
    - `SUPER_ADMIN_EMAILS` (csv de emails)
