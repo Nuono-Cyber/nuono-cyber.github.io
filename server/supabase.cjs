@@ -93,7 +93,13 @@ async function getSingleRow(table, query = {}) {
     });
     return data || null;
   } catch (error) {
-    if (error instanceof Error && error.message.includes("JSON object requested, multiple (or no) rows returned")) {
+    if (
+      error instanceof Error &&
+      (
+        error.message.includes("JSON object requested, multiple (or no) rows returned") ||
+        error.message.includes("Cannot coerce the result to a single JSON object")
+      )
+    ) {
       return null;
     }
     throw error;
