@@ -16,8 +16,10 @@ import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
 import { InternalChat } from '@/components/chat/InternalChat';
-import { Loader2, Instagram, Calendar, BarChart3 } from 'lucide-react';
+import { Loader2, Instagram, Calendar, BarChart3, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const TAB_TITLES: Record<string, { title: string; description: string }> = {
   overview: { title: 'Visão Geral', description: 'Resumo completo de performance' },
@@ -34,11 +36,17 @@ const TAB_TITLES: Record<string, { title: string; description: string }> = {
 
 export function Dashboard() {
   const { posts, isLoading, error, summary, addUploadedData, isSaving, refreshData } = useInstagramData();
-  const { isSuperAdmin } = useAuthContext();
+  const { isSuperAdmin, signOut } = useAuthContext();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [chatBotOpen, setChatBotOpen] = useState(false);
   const [internalChatOpen, setInternalChatOpen] = useState(false);
   const [weatherEffect, setWeatherEffect] = useState<'snow' | 'rain' | 'none'>('snow');
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
 
   if (isLoading) {
     return (
@@ -139,6 +147,10 @@ export function Dashboard() {
                     </Badge>
                   )}
                 </div>
+                <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+                  <LogOut className="w-4 h-4" />
+                  Sair
+                </Button>
               </div>
             </div>
           </header>

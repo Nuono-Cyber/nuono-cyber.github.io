@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, AppUser, UserRole, AUTH_BYPASS_ENABLED } from '@/lib/api';
+import { api, AppUser, UserRole } from '@/lib/api';
 export type { UserRole };
 import { logActivity } from '@/utils/activityLogger';
 
@@ -18,14 +18,6 @@ interface AuthState {
   isSuperAdmin: boolean;
 }
 
-const DEMO_USER: AppUser = {
-  id: 'demo-super-admin',
-  email: 'demo@nadenterprise.com',
-  role: 'super_admin',
-  full_name: 'Demo Admin',
-  isSuperAdmin: true,
-};
-
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -36,17 +28,6 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    if (AUTH_BYPASS_ENABLED) {
-      setAuthState({
-        user: DEMO_USER,
-        session: { token: 'demo-session-token' },
-        role: DEMO_USER.role,
-        isSuperAdmin: true,
-        isLoading: false,
-      });
-      return;
-    }
-
     const token = api.getToken();
     if (!token) {
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -69,17 +50,6 @@ export function useAuth() {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (AUTH_BYPASS_ENABLED) {
-      setAuthState({
-        user: DEMO_USER,
-        session: { token: 'demo-session-token' },
-        role: DEMO_USER.role,
-        isSuperAdmin: true,
-        isLoading: false,
-      });
-      return { error: null } as SignInResult;
-    }
-
     try {
       const response = await api.auth.login(email, password);
       if (response.requiresPasswordChange) {
@@ -109,35 +79,13 @@ export function useAuth() {
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    if (AUTH_BYPASS_ENABLED) {
-      return { error: null };
-    }
-
-    // Validate email domain
-    if (!email.toLowerCase().endsWith('@nadenterprise.com')) {
-      return { error: { message: 'Apenas emails @nadenterprise.com são permitidos' } };
-    }
-
-    try {
-      await api.auth.signup({ email, password, fullName });
-      return { error: null };
-    } catch (error: any) {
-      return { error };
-    }
+    void email;
+    void password;
+    void fullName;
+    return { error: { message: 'Cadastro público desativado.' } };
   };
 
   const signOut = async () => {
-    if (AUTH_BYPASS_ENABLED) {
-      setAuthState({
-        user: DEMO_USER,
-        session: { token: 'demo-session-token' },
-        role: DEMO_USER.role,
-        isLoading: false,
-        isSuperAdmin: true,
-      });
-      return { error: null };
-    }
-
     await logActivity('logout');
     api.clearToken();
     setAuthState({
@@ -151,12 +99,8 @@ export function useAuth() {
   };
 
   const resetPassword = async (email: string) => {
-    if (AUTH_BYPASS_ENABLED) {
-      return { error: null };
-    }
-
     try {
-      await api.auth.requestReset({ corporateEmail: email, personalEmail: '' });
+      await api.auth.requestReset({ corporateEmail: email });
       return { error: null };
     } catch (error: any) {
       return { error };

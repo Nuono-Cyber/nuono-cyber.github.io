@@ -1,13 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData } from '@/utils/dataProcessor';
-import { api, AUTH_BYPASS_ENABLED } from '@/lib/api';
-import Papa from 'papaparse';
+import { api } from '@/lib/api';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
-
-const OFFLINE_POSTS_KEY = 'offline_instagram_posts_db';
-const OFFLINE_SEED_FILE = 'data/instagram_posts-export-2026-05-02_09-17-47.csv';
 
 interface DbInstagramPost {
   id: string;
@@ -114,63 +110,6 @@ function instagramPostToDbFormat(post: InstagramPost) {
   };
 }
 
-function loadOfflineDbRecords(): DbInstagramPost[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(OFFLINE_POSTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveOfflineDbRecords(records: DbInstagramPost[]) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(OFFLINE_POSTS_KEY, JSON.stringify(records));
-}
-
-async function seedOfflineDbRecordsFromCsv(): Promise<DbInstagramPost[]> {
-  const seedUrl = `${import.meta.env.BASE_URL}${OFFLINE_SEED_FILE}`;
-  const response = await fetch(seedUrl);
-  if (!response.ok) return [];
-
-  const text = await response.text();
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: true,
-    delimiter: ';',
-  });
-
-  const seeded = parsed.data
-    .map((row) => ({
-      id: row.id || row.post_id || crypto.randomUUID(),
-      post_id: row.post_id || '',
-      account_id: row.account_id || null,
-      username: row.username || null,
-      account_name: row.account_name || null,
-      description: row.description || null,
-      duration: Number(row.duration || 0),
-      published_at: row.published_at || null,
-      permalink: row.permalink || null,
-      post_type: row.post_type || null,
-      views: Number(row.views || 0),
-      reach: Number(row.reach || 0),
-      likes: Number(row.likes || 0),
-      shares: Number(row.shares || 0),
-      follows: Number(row.follows || 0),
-      comments: Number(row.comments || 0),
-      saves: Number(row.saves || 0),
-    }))
-    .filter((row) => row.post_id);
-
-  if (seeded.length > 0) {
-    saveOfflineDbRecords(seeded);
-  }
-
-  return seeded;
-}
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
@@ -180,18 +119,6 @@ export function useInstagramData() {
 
   // Load data from database
   const loadFromDatabase = async () => {
-    if (AUTH_BYPASS_ENABLED) {
-      let offlineRecords = loadOfflineDbRecords();
-      if (offlineRecords.length === 0) {
-        offlineRecords = await seedOfflineDbRecordsFromCsv();
-      }
-      const offlinePosts = offlineRecords.map(dbPostToInstagramPost);
-      setPosts(offlinePosts);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
       const { rows: data } = await api.posts.list();
@@ -205,12 +132,7 @@ export function useInstagramData() {
       setError(null);
     } catch (err: any) {
       console.error('Error loading from database:', err);
-      if (AUTH_BYPASS_ENABLED) {
-        setPosts([]);
-        setError(null);
-      } else {
-        setError('Erro ao carregar dados do Instagram');
-      }
+      setError('Erro ao carregar dados do Instagram');
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +147,8 @@ export function useInstagramData() {
     let newPosts: InstagramPost[] = [];
 
     try {
-      const csvText = Papa.unparse(data);
+      const Papa = await import('papaparse');
+      const csvText = Papa.default.unparse(data);
       newPosts = parseCSVData(csvText);
 
       if (newPosts.length === 0) {
@@ -237,27 +160,6 @@ export function useInstagramData() {
       // Convert to database format
       const dbRecords = newPosts.map(instagramPostToDbFormat);
 
-      if (AUTH_BYPASS_ENABLED) {
-        const existing = mode === 'replace' ? [] : loadOfflineDbRecords();
-        const mergedByPostId = new Map<string, DbInstagramPost>();
-
-        for (const row of existing) {
-          mergedByPostId.set(row.post_id, row);
-        }
-
-        for (const row of dbRecords) {
-          const id = row.id || row.post_id;
-          mergedByPostId.set(row.post_id, { ...row, id });
-        }
-
-        const merged = Array.from(mergedByPostId.values());
-        saveOfflineDbRecords(merged);
-        setPosts(merged.map(dbPostToInstagramPost));
-        toast.success(mode === 'replace' ? `${newPosts.length} registros carregados como amostra!` : `${newPosts.length} registros adicionados no modo incremental!`);
-        setIsSaving(false);
-        return;
-      }
-      
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
       const upsertResp = await api.posts.upsert(dbRecords, mode);

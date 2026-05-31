@@ -3,7 +3,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BarChart3, Clock, FileVideo, Heart,
   TrendingUp, Target, LineChart, Lightbulb, Shield, Activity,
-  Instagram, Settings, UserPlus
+  Instagram, Settings
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import {
@@ -126,16 +126,6 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                   >
                     <Activity className="h-4 w-4 shrink-0" />
                     {!collapsed && <span className="text-sm">Logs de Atividade</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => navigate('/admin/invites')}
-                    className="hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-                    tooltip={collapsed ? 'Convites' : undefined}
-                  >
-                    <UserPlus className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span className="text-sm">Convites</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

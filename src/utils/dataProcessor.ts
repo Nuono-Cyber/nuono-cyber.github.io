@@ -7,6 +7,16 @@ interface CSVRow {
   [key: string]: string;
 }
 
+function getRowValue(row: CSVRow, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return '';
+}
+
 export function parseCSVData(csvText: string): InstagramPost[] {
   const result: ParseResult<CSVRow> = Papa.parse<CSVRow>(csvText, {
     header: true,
@@ -14,16 +24,16 @@ export function parseCSVData(csvText: string): InstagramPost[] {
   });
 
   return result.data.map((row: CSVRow, index: number) => {
-    const publishedAt = parseDate(row['Horário de publicação']);
-    const description = row['Descrição'] || '';
-    const views = parseNumber(row['Visualizações']);
-    const reach = parseNumber(row['Alcance']);
-    const likes = parseNumber(row['Curtidas']);
-    const comments = parseNumber(row['Comentários']);
-    const shares = parseNumber(row['Compartilhamentos']);
-    const saves = parseNumber(row['Salvamentos']);
-    const follows = parseNumber(row['Seguimentos']);
-    const duration = parseNumber(row['Duração (s)']);
+    const publishedAt = parseDate(getRowValue(row, ['Horário de publicação', 'published_at']));
+    const description = getRowValue(row, ['Descrição', 'description']);
+    const views = parseNumber(getRowValue(row, ['Visualizações', 'views']));
+    const reach = parseNumber(getRowValue(row, ['Alcance', 'reach']));
+    const likes = parseNumber(getRowValue(row, ['Curtidas', 'likes']));
+    const comments = parseNumber(getRowValue(row, ['Comentários', 'comments']));
+    const shares = parseNumber(getRowValue(row, ['Compartilhamentos', 'shares']));
+    const saves = parseNumber(getRowValue(row, ['Salvamentos', 'saves']));
+    const follows = parseNumber(getRowValue(row, ['Seguimentos', 'follows']));
+    const duration = parseNumber(getRowValue(row, ['Duração (s)', 'duration']));
 
     const engagementTotal = likes + comments + shares + saves;
     const engagementRate = reach > 0 ? (engagementTotal / reach) * 100 : 0;
@@ -34,15 +44,15 @@ export function parseCSVData(csvText: string): InstagramPost[] {
     const hashtags = description.match(/#\w+/g) || [];
 
     return {
-      id: row['Identificação do post'] || `post-${index}`,
-      accountId: row['Identificação da conta'] || '',
-      username: row['Nome de usuário da conta'] || '',
-      accountName: row['Nome da conta'] || '',
+      id: getRowValue(row, ['Identificação do post', 'post_id', 'id']) || `post-${index}`,
+      accountId: getRowValue(row, ['Identificação da conta', 'account_id']),
+      username: getRowValue(row, ['Nome de usuário da conta', 'username']),
+      accountName: getRowValue(row, ['Nome da conta', 'account_name']),
       description,
       duration,
       publishedAt,
-      permalink: row['Link permanente'] || '',
-      postType: row['Tipo de post'] || 'Reel do Instagram',
+      permalink: getRowValue(row, ['Link permanente', 'permalink']),
+      postType: getRowValue(row, ['Tipo de post', 'post_type']) || 'Reel do Instagram',
       views,
       reach,
       likes,
@@ -72,17 +82,22 @@ function parseDate(dateStr: string): Date {
 
   if (!normalized) return new Date();
 
-  // Format: dd/mm/yyyy [hh:mm[:ss]]
+  // Supports dd/mm/yyyy and mm/dd/yyyy exports.
   if (normalized.includes('/')) {
     const [datePart, timePart] = normalized.split(' ');
-    const [day, month, year] = datePart.split('/').map(Number);
+    const [part1, part2, year] = datePart.split('/').map(Number);
     const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+    const preferMonthFirst = part2 > 12;
+    const day = preferMonthFirst ? part2 : part1;
+    const month = preferMonthFirst ? part1 : part2;
     const parsed = new Date(year, month - 1, day, hours || 0, minutes || 0);
-    if (!isNaN(parsed.getTime())) return parsed;
+    if (!isNaN(parsed.getTime()) && parsed.getMonth() === month - 1 && parsed.getDate() === day) return parsed;
   }
 
   // Fallback: let JS parse ISO-like formats (e.g., yyyy-mm-dd hh:mm:ss)
-  const isoLike = normalized.replace(' ', 'T');
+  const isoLike = normalized
+    .replace(' ', 'T')
+    .replace(/([+-]\d{2})$/, '$1:00');
   const parsed = new Date(isoLike);
   if (!isNaN(parsed.getTime())) return parsed;
 

@@ -5,7 +5,23 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const fs = require("node:fs");
 const path = require("node:path");
-const { db, uuidv4 } = require("./db.cjs");
+const {
+  uuidv4,
+  listRows,
+  getSingleRow,
+  insertRows,
+  updateRows,
+  deleteRows,
+  countRows,
+  ensureSuperAdmins,
+} = require("./supabase.cjs");
+const {
+  getMetaConfigRow,
+  sanitizeMetaConfig,
+  saveMetaConfig,
+  syncInstagramFromMeta,
+  startMetaSyncScheduler,
+} = require("./meta.cjs");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8787);
@@ -16,10 +32,6 @@ const JWT_SECRET = configuredJwtSecret || (isProduction ? "" : "dev-only-secret"
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required in production.");
-}
-
-if (!configuredJwtSecret && !isProduction) {
-  console.warn("[auth] JWT_SECRET not set; using development fallback secret.");
 }
 
 const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
@@ -36,12 +48,22 @@ const allowedOrigins = new Set(configuredOrigins.length > 0 ? configuredOrigins 
 const exposeResetLink =
   !isProduction || String(process.env.EXPOSE_RESET_LINK || "").toLowerCase() === "true";
 
+function isAllowedDevelopmentOrigin(origin) {
+  if (isProduction || !origin) return false;
+  try {
+    const url = new URL(origin);
+    return ["localhost", "127.0.0.1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 app.set("trust proxy", 1);
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowAllOrigins || allowedOrigins.has(origin)) {
+      if (!origin || allowAllOrigins || allowedOrigins.has(origin) || isAllowedDevelopmentOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -61,26 +83,25 @@ const authLimiter = rateLimit({
   message: { error: "Muitas tentativas. Tente novamente em alguns minutos." },
 });
 
-const inviteValidationLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Muitas validações de convite. Tente novamente em alguns minutos." },
-});
-
 function issuePasswordResetToken(userId) {
   const token = uuidv4();
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-  db.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL").run(now, userId);
-  db.prepare(`
-    INSERT INTO password_reset_tokens (id, user_id, token, created_at, expires_at, used_at)
-    VALUES (?, ?, ?, ?, ?, NULL)
-  `).run(uuidv4(), userId, token, now, expiresAt);
-
-  return { token, resetPath: `/auth/reset-password?token=${token}&reason=first-access` };
+  return Promise.all([
+    updateRows("password_reset_tokens", { used_at: now }, {
+      user_id: `eq.${userId}`,
+      used_at: "is.null",
+    }, { returning: "minimal" }),
+    insertRows("password_reset_tokens", {
+      id: uuidv4(),
+      user_id: userId,
+      token,
+      created_at: now,
+      expires_at: expiresAt,
+      used_at: null,
+    }),
+  ]).then(() => ({ token, resetPath: `/auth/reset-password?token=${token}&reason=first-access` }));
 }
 
 function createToken(user) {
@@ -112,15 +133,21 @@ function superAdminRequired(req, res, next) {
   next();
 }
 
-app.get("/api/health", (_req, res) => {
+function escapeFilterValue(value) {
+  return String(value).replace(/,/g, "%2C");
+}
+
+app.get("/api/health", async (_req, res) => {
   try {
-    const dbCheck = db.prepare("SELECT 1 as ok").get();
-    const postsCount = db.prepare("SELECT COUNT(*) as count FROM instagram_posts").get().count;
-    const usersCount = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
+    const [postsCount, usersCount] = await Promise.all([
+      countRows("instagram_posts"),
+      countRows("users"),
+    ]);
+
     res.json({
       ok: true,
       api: "up",
-      db: dbCheck?.ok === 1 ? "up" : "down",
+      db: "up",
       stats: {
         instagram_posts: postsCount,
         users: usersCount,
@@ -138,94 +165,74 @@ app.get("/api/health", (_req, res) => {
   }
 });
 
-app.post("/api/auth/login", authLimiter, (req, res) => {
+app.post("/api/auth/login", authLimiter, async (req, res) => {
   const email = String(req.body?.email || "").toLowerCase().trim();
   const password = String(req.body?.password || "");
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: "Email ou senha incorretos" });
-  }
-  if (user.must_change_password) {
-    const reset = issuePasswordResetToken(user.id);
+
+  try {
+    const user = await getSingleRow("users", {
+      select: "*",
+      email: `eq.${email}`,
+    });
+
+    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+      return res.status(401).json({ error: "Email ou senha incorretos" });
+    }
+
+    if (user.must_change_password) {
+      const reset = await issuePasswordResetToken(user.id);
+      return res.json({
+        ok: true,
+        requiresPasswordChange: true,
+        resetToken: reset.token,
+        resetPath: reset.resetPath,
+      });
+    }
+
+    const token = createToken(user);
     return res.json({
       ok: true,
-      requiresPasswordChange: true,
-      resetToken: reset.token,
-      resetPath: reset.resetPath,
+      token,
+      user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
     });
+  } catch (error) {
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Falha no login" });
   }
-  const token = createToken(user);
-  return res.json({
-    ok: true,
-    token,
-    user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
+});
+
+app.get("/api/auth/session", authRequired, async (req, res) => {
+  const user = await getSingleRow("users", {
+    select: "id,email,role,full_name,must_change_password",
+    id: `eq.${req.user.sub}`,
   });
-});
-
-app.post("/api/invites/validate", inviteValidationLimiter, (req, res) => {
-  const code = String(req.body?.code || "").toLowerCase().trim();
-  const email = String(req.body?.email || "").toLowerCase().trim();
-  const invite = db
-    .prepare("SELECT * FROM invites WHERE code = ? AND used_at IS NULL AND expires_at > ?")
-    .get(code, new Date().toISOString());
-  if (!invite) return res.json({ valid: false });
-  if (invite.email && invite.email.toLowerCase() !== email) return res.json({ valid: false });
-  return res.json({ valid: true });
-});
-
-app.post("/api/auth/signup", authLimiter, (req, res) => {
-  const email = String(req.body?.email || "").toLowerCase().trim();
-  const password = String(req.body?.password || "");
-  const fullName = req.body?.fullName ? String(req.body.fullName) : null;
-  const personalEmail = req.body?.personalEmail ? String(req.body.personalEmail).toLowerCase() : null;
-  const inviteCode = String(req.body?.inviteCode || "").toLowerCase().trim();
-
-  if (!email.endsWith("@nadenterprise.com")) {
-    return res.status(400).json({ error: "Apenas emails @nadenterprise.com são permitidos" });
-  }
-  if (password.length < 6) return res.status(400).json({ error: "Senha muito curta" });
-
-  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
-  if (existing) return res.status(400).json({ error: "Este email já está cadastrado" });
-
-  const invite = db
-    .prepare("SELECT * FROM invites WHERE code = ? AND used_at IS NULL AND expires_at > ?")
-    .get(inviteCode, new Date().toISOString());
-  if (!invite) return res.status(400).json({ error: "Código inválido, expirado ou já utilizado" });
-  if (invite.email && invite.email.toLowerCase() !== email) {
-    return res.status(400).json({ error: "Código não corresponde ao email informado" });
-  }
-
-  const id = uuidv4();
-  const now = new Date().toISOString();
-  db.prepare(`
-    INSERT INTO users (id, email, password_hash, full_name, personal_email, role, created_at)
-    VALUES (?, ?, ?, ?, ?, 'user', ?)
-  `).run(id, email, bcrypt.hashSync(password, 10), fullName, personalEmail, now);
-  db.prepare("UPDATE invites SET used_at = ? WHERE id = ?").run(now, invite.id);
-  return res.json({ ok: true });
-});
-
-app.get("/api/auth/session", authRequired, (req, res) => {
-  const user = db.prepare("SELECT id, email, role, full_name, must_change_password FROM users WHERE id = ?").get(req.user.sub);
   if (!user) return res.status(401).json({ error: "Invalid session" });
   res.json({ user: { ...user, isSuperAdmin: user.role === "super_admin" } });
 });
 
-app.post("/api/auth/password-reset/request", authLimiter, (req, res) => {
+app.post("/api/auth/password-reset/request", authLimiter, async (req, res) => {
   const corporateEmail = String(req.body?.corporateEmail || "").toLowerCase().trim();
-  const personalEmail = String(req.body?.personalEmail || "").toLowerCase().trim();
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(corporateEmail);
-  if (!user || (user.personal_email || "").toLowerCase() !== personalEmail) {
-    return res.status(400).json({ error: "Dados não conferem" });
+  const user = await getSingleRow("users", {
+    select: "*",
+    email: `eq.${corporateEmail}`,
+  });
+
+  if (!user) {
+    return res.status(400).json({ error: "Usuário não encontrado" });
   }
+
   const token = uuidv4();
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  db.prepare(`
-    INSERT INTO password_reset_tokens (id, user_id, token, created_at, expires_at, used_at)
-    VALUES (?, ?, ?, ?, ?, NULL)
-  `).run(uuidv4(), user.id, token, now, expiresAt);
+
+  await insertRows("password_reset_tokens", {
+    id: uuidv4(),
+    user_id: user.id,
+    token,
+    created_at: now,
+    expires_at: expiresAt,
+    used_at: null,
+  });
+
   const response = { ok: true };
   if (exposeResetLink) {
     response.resetLink = `/auth/reset-password?token=${token}`;
@@ -233,170 +240,190 @@ app.post("/api/auth/password-reset/request", authLimiter, (req, res) => {
   res.json(response);
 });
 
-app.post("/api/auth/password-reset/confirm", authLimiter, (req, res) => {
+app.post("/api/auth/password-reset/confirm", authLimiter, async (req, res) => {
   const token = String(req.body?.token || "");
   const password = String(req.body?.password || "");
   if (password.length < 6) return res.status(400).json({ error: "Senha muito curta" });
-  const row = db
-    .prepare("SELECT * FROM password_reset_tokens WHERE token = ? AND used_at IS NULL AND expires_at > ?")
-    .get(token, new Date().toISOString());
-  if (!row) return res.status(400).json({ error: "Token inválido ou expirado" });
-  db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?").run(bcrypt.hashSync(password, 10), row.user_id);
-  db.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE id = ?").run(new Date().toISOString(), row.id);
+
+  const row = await getSingleRow("password_reset_tokens", {
+    select: "*",
+    token: `eq.${token}`,
+    used_at: "is.null",
+  });
+
+  if (!row || new Date(row.expires_at).getTime() <= Date.now()) {
+    return res.status(400).json({ error: "Token inválido ou expirado" });
+  }
+
+  await updateRows("users", {
+    password_hash: bcrypt.hashSync(password, 10),
+    must_change_password: false,
+  }, {
+    id: `eq.${row.user_id}`,
+  }, { returning: "minimal" });
+
+  await updateRows("password_reset_tokens", {
+    used_at: new Date().toISOString(),
+  }, {
+    id: `eq.${row.id}`,
+  }, { returning: "minimal" });
+
   res.json({ ok: true });
 });
 
-app.get("/api/posts", authRequired, (_req, res) => {
-  const rows = db.prepare("SELECT * FROM instagram_posts ORDER BY published_at DESC").all();
+app.get("/api/posts", authRequired, async (_req, res) => {
+  const rows = await listRows("instagram_posts", {
+    select: "*",
+    order: "published_at.desc",
+  });
   res.json({ rows });
 });
 
-app.post("/api/posts/upsert", authRequired, (req, res) => {
+app.post("/api/posts/upsert", authRequired, async (req, res) => {
   const posts = Array.isArray(req.body?.posts) ? req.body.posts : [];
   const mode = req.body?.mode === "replace" ? "replace" : "increment";
-  const stmt = db.prepare(`
-    INSERT INTO instagram_posts (
-      id, post_id, account_id, username, account_name, description, duration, published_at, permalink, post_type, views, reach, likes, shares, follows, comments, saves
-    ) VALUES (
-      @id, @post_id, @account_id, @username, @account_name, @description, @duration, @published_at, @permalink, @post_type, @views, @reach, @likes, @shares, @follows, @comments, @saves
-    )
-    ON CONFLICT(post_id) DO UPDATE SET
-      account_id=excluded.account_id,
-      username=excluded.username,
-      account_name=excluded.account_name,
-      description=excluded.description,
-      duration=excluded.duration,
-      published_at=excluded.published_at,
-      permalink=excluded.permalink,
-      post_type=excluded.post_type,
-      views=excluded.views,
-      reach=excluded.reach,
-      likes=excluded.likes,
-      shares=excluded.shares,
-      follows=excluded.follows,
-      comments=excluded.comments,
-      saves=excluded.saves
-  `);
+
   try {
-    db.exec("BEGIN");
     if (mode === "replace") {
-      db.prepare("DELETE FROM instagram_posts").run();
+      await deleteRows("instagram_posts", {
+        post_id: "not.is.null",
+      });
     }
-    for (const item of posts) {
-      stmt.run({ id: item.id || uuidv4(), ...item });
+
+    if (posts.length > 0) {
+      const normalizedPosts = posts.map((item) => ({
+        id: item.id || uuidv4(),
+        ...item,
+        updated_at: new Date().toISOString(),
+      }));
+
+      await insertRows("instagram_posts", normalizedPosts, {
+        onConflict: "post_id",
+        upsert: true,
+      });
     }
-    db.exec("COMMIT");
+
     res.json({ ok: true, processed: posts.length, mode });
   } catch (error) {
-    db.exec("ROLLBACK");
     res.status(500).json({ error: error instanceof Error ? error.message : "Falha ao salvar posts" });
   }
 });
 
-app.post("/api/activity", authRequired, (req, res) => {
-  db.prepare(`
-    INSERT INTO activity_logs (id, user_id, action, details, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    uuidv4(),
-    req.user.sub,
-    String(req.body?.action || "unknown"),
-    req.body?.details ? JSON.stringify(req.body.details) : null,
-    new Date().toISOString()
-  );
-  res.json({ ok: true });
+app.get("/api/meta/config", authRequired, superAdminRequired, async (_req, res) => {
+  res.json(sanitizeMetaConfig(await getMetaConfigRow()));
 });
 
-app.get("/api/activity", authRequired, superAdminRequired, (_req, res) => {
-  const logs = db.prepare(`
-    SELECT l.id, l.user_id, l.action, l.details, l.created_at, u.email as user_email, u.full_name as user_name
-    FROM activity_logs l
-    JOIN users u ON u.id = l.user_id
-    ORDER BY l.created_at DESC
-  `).all().map((row) => ({ ...row, details: row.details ? JSON.parse(row.details) : null }));
-  res.json({ rows: logs });
-});
-
-app.get("/api/admin/invites", authRequired, superAdminRequired, (_req, res) => {
-  const rows = db.prepare("SELECT * FROM invites ORDER BY created_at DESC").all();
-  res.json({ rows });
-});
-
-app.post("/api/admin/invites", authRequired, superAdminRequired, (req, res) => {
-  const now = new Date();
-  const code = String(req.body?.code || "").toLowerCase().trim();
-  if (!/^[a-f0-9]{10}$/.test(code)) {
-    return res.status(400).json({ error: "Código inválido. Use 10 caracteres hexadecimais." });
+app.post("/api/meta/config", authRequired, superAdminRequired, async (req, res) => {
+  try {
+    const config = await saveMetaConfig({
+      instagramUserId: req.body?.instagramUserId,
+      accessToken: req.body?.accessToken,
+      enabled: req.body?.enabled,
+      syncIntervalMinutes: req.body?.syncIntervalMinutes,
+    });
+    res.json(config);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Falha ao salvar configuração da Meta" });
   }
-
-  const inviteEmail = req.body?.email ? String(req.body.email).toLowerCase().trim() : null;
-  const personalEmail = req.body?.personalEmail ? String(req.body.personalEmail).toLowerCase().trim() : null;
-  const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
-  const row = {
-    id: uuidv4(),
-    token: uuidv4(),
-    code,
-    email: inviteEmail,
-    personal_email: personalEmail,
-    created_at: now.toISOString(),
-    expires_at: expiresAt,
-    used_at: null,
-    invited_by: req.user.sub,
-  };
-  db.prepare(`
-    INSERT INTO invites (id, code, token, email, personal_email, created_at, expires_at, used_at, invited_by)
-    VALUES (@id, @code, @token, @email, @personal_email, @created_at, @expires_at, @used_at, @invited_by)
-  `).run(row);
-  res.json({ row });
 });
 
-app.delete("/api/admin/invites/:id", authRequired, superAdminRequired, (req, res) => {
-  db.prepare("DELETE FROM invites WHERE id = ?").run(req.params.id);
+app.post("/api/meta/sync", authRequired, superAdminRequired, async (_req, res) => {
+  try {
+    const result = await syncInstagramFromMeta();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Falha ao sincronizar com a Meta" });
+  }
+});
+
+app.post("/api/activity", authRequired, async (req, res) => {
+  await insertRows("activity_logs", {
+    id: uuidv4(),
+    user_id: req.user.sub,
+    action: String(req.body?.action || "unknown"),
+    details: req.body?.details || null,
+    created_at: new Date().toISOString(),
+  });
   res.json({ ok: true });
 });
 
-app.get("/api/admin/users", authRequired, superAdminRequired, (_req, res) => {
-  const rows = db.prepare(`
-    SELECT id, email, full_name, created_at, role
-    FROM users
-    ORDER BY created_at DESC
-  `).all();
+app.get("/api/activity", authRequired, superAdminRequired, async (_req, res) => {
+  const [logs, users] = await Promise.all([
+    listRows("activity_logs", {
+      select: "*",
+      order: "created_at.desc",
+    }),
+    listRows("users", {
+      select: "id,email,full_name",
+    }),
+  ]);
+
+  const userMap = new Map(users.map((user) => [user.id, user]));
+  const rows = logs.map((log) => ({
+    ...log,
+    user_email: userMap.get(log.user_id)?.email || "",
+    user_name: userMap.get(log.user_id)?.full_name || null,
+  }));
   res.json({ rows });
 });
 
-app.get("/api/chat/users", authRequired, (_req, res) => {
-  const rows = db.prepare("SELECT id as user_id, full_name, email FROM users WHERE id != ? ORDER BY full_name").all(req.user.sub);
+app.get("/api/admin/users", authRequired, superAdminRequired, async (_req, res) => {
+  const rows = await listRows("users", {
+    select: "id,email,full_name,created_at,role,must_change_password",
+    order: "created_at.desc",
+  });
   res.json({ rows });
 });
 
-app.get("/api/chat/messages", authRequired, (req, res) => {
+app.get("/api/chat/users", authRequired, async (req, res) => {
+  const rows = await listRows("users", {
+    select: "id,full_name,email",
+    id: `neq.${req.user.sub}`,
+    order: "full_name.asc",
+  });
+
+  res.json({
+    rows: rows.map((row) => ({
+      user_id: row.id,
+      full_name: row.full_name,
+      email: row.email,
+    })),
+  });
+});
+
+app.get("/api/chat/messages", authRequired, async (req, res) => {
   const withUser = req.query.withUser ? String(req.query.withUser) : null;
   let rows = [];
+
   if (withUser) {
-    rows = db.prepare(`
-      SELECT * FROM internal_messages
-      WHERE (sender_id = ? AND recipient_id = ?)
-         OR (sender_id = ? AND recipient_id = ?)
-      ORDER BY created_at ASC
-    `).all(req.user.sub, withUser, withUser, req.user.sub);
+    rows = await listRows("internal_messages", {
+      select: "*",
+      or: `and(sender_id.eq.${escapeFilterValue(req.user.sub)},recipient_id.eq.${escapeFilterValue(withUser)}),and(sender_id.eq.${escapeFilterValue(withUser)},recipient_id.eq.${escapeFilterValue(req.user.sub)})`,
+      order: "created_at.asc",
+    });
   } else {
-    rows = db.prepare(`
-      SELECT * FROM internal_messages
-      WHERE recipient_id IS NULL
-      ORDER BY created_at ASC
-    `).all();
+    rows = await listRows("internal_messages", {
+      select: "*",
+      recipient_id: "is.null",
+      order: "created_at.asc",
+    });
   }
-  const users = db.prepare("SELECT id, full_name, email FROM users").all();
-  const userMap = new Map(users.map((u) => [u.id, u]));
-  const enriched = rows.map((m) => ({
-    ...m,
-    sender_name: userMap.get(m.sender_id)?.full_name || "Usuário",
-    sender_email: userMap.get(m.sender_id)?.email || "",
+
+  const users = await listRows("users", {
+    select: "id,full_name,email",
+  });
+  const userMap = new Map(users.map((user) => [user.id, user]));
+
+  const enriched = rows.map((message) => ({
+    ...message,
+    sender_name: userMap.get(message.sender_id)?.full_name || "Usuário",
+    sender_email: userMap.get(message.sender_id)?.email || "",
   }));
+
   res.json({ rows: enriched });
 });
 
-app.post("/api/chat/messages", authRequired, (req, res) => {
+app.post("/api/chat/messages", authRequired, async (req, res) => {
   const row = {
     id: uuidv4(),
     sender_id: req.user.sub,
@@ -405,20 +432,21 @@ app.post("/api/chat/messages", authRequired, (req, res) => {
     created_at: new Date().toISOString(),
     read_at: null,
   };
+
   if (!row.content) return res.status(400).json({ error: "Mensagem vazia" });
-  db.prepare(`
-    INSERT INTO internal_messages (id, sender_id, recipient_id, content, created_at, read_at)
-    VALUES (@id, @sender_id, @recipient_id, @content, @created_at, @read_at)
-  `).run(row);
+  await insertRows("internal_messages", row);
   res.json({ row });
 });
 
-app.post("/api/chat/messages/:id/read", authRequired, (req, res) => {
-  db.prepare(`
-    UPDATE internal_messages
-    SET read_at = ?
-    WHERE id = ? AND recipient_id = ? AND read_at IS NULL
-  `).run(new Date().toISOString(), req.params.id, req.user.sub);
+app.post("/api/chat/messages/:id/read", authRequired, async (req, res) => {
+  await updateRows("internal_messages", {
+    read_at: new Date().toISOString(),
+  }, {
+    id: `eq.${req.params.id}`,
+    recipient_id: `eq.${req.user.sub}`,
+    read_at: "is.null",
+  }, { returning: "minimal" });
+
   res.json({ ok: true });
 });
 
@@ -428,7 +456,7 @@ app.post("/api/ai/chat", authRequired, (req, res) => {
   const tips = [
     "Publique nos mesmos horários dos posts com maior alcance e teste 2 variações de abertura.",
     "Priorize conteúdo com alta taxa de salvamento e reaproveite os temas em séries semanais.",
-    "Compare posts por formato (Reel, carrossel, estático) e mantenha os 2 melhores formatos por 30 dias.",
+    "Compare posts por formato e mantenha os 2 melhores por 30 dias.",
     "Use CTA explícita em legendas quando o objetivo for comentários e compartilhamentos.",
   ];
   const response = `Análise rápida: ${last ? "com base na sua pergunta, " : ""}${tips[Math.floor(Math.random() * tips.length)]}`;
@@ -443,6 +471,14 @@ if (fs.existsSync(staticDir)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Fullstack app running on http://localhost:${PORT}`);
-});
+ensureSuperAdmins()
+  .then(() => startMetaSyncScheduler())
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Fullstack app running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("[startup]", error instanceof Error ? error.message : error);
+    process.exit(1);
+  });

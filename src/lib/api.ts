@@ -16,6 +16,18 @@ export interface LoginSuccessResponse {
   requiresPasswordChange?: false;
 }
 
+export interface MetaConfigResponse {
+  configured: boolean;
+  instagramUserId: string;
+  enabled: boolean;
+  hasAccessToken: boolean;
+  syncIntervalMinutes: number;
+  lastSyncedAt: string | null;
+  lastAttemptAt: string | null;
+  lastError: string | null;
+  apiVersion: string;
+}
+
 export interface LoginPasswordChangeResponse {
   ok: true;
   requiresPasswordChange: true;
@@ -28,17 +40,6 @@ export type LoginResponse = LoginSuccessResponse | LoginPasswordChangeResponse;
 const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
 const GITHUB_PAGES_DEFAULT_API = "https://nuono-api.onrender.com";
-
-function getAuthBypassEnabled() {
-  const raw = String(import.meta.env.VITE_DISABLE_LOGIN || "").toLowerCase();
-  if (raw === "true") return true;
-  if (typeof window !== "undefined" && window.location.hostname.toLowerCase() === GITHUB_PAGES_HOST) {
-    return true;
-  }
-  return false;
-}
-
-export const AUTH_BYPASS_ENABLED = getAuthBypassEnabled();
 
 function getDefaultApiBase() {
   if (typeof window === "undefined") return "";
@@ -97,19 +98,8 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
-    signup: (payload: {
-      email: string;
-      password: string;
-      fullName?: string;
-      personalEmail?: string;
-      inviteCode?: string;
-    }) =>
-      request<{ ok: boolean }>("/api/auth/signup", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
     session: () => request<{ user: AppUser }>("/api/auth/session"),
-    requestReset: (payload: { corporateEmail: string; personalEmail: string }) =>
+    requestReset: (payload: { corporateEmail: string }) =>
       request<{ ok: boolean; resetLink?: string }>("/api/auth/password-reset/request", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -120,21 +110,6 @@ export const api = {
         body: JSON.stringify(payload),
       }),
   },
-  invites: {
-    validate: (code: string, email: string) =>
-      request<{ valid: boolean }>("/api/invites/validate", {
-        method: "POST",
-        body: JSON.stringify({ code, email }),
-      }),
-    listAdmin: () => request<{ rows: any[] }>("/api/admin/invites"),
-    createAdmin: (payload: { code: string; email?: string; personalEmail?: string }) =>
-      request<{ row: any }>("/api/admin/invites", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-    deleteAdmin: (id: string) =>
-      request<{ ok: boolean }>(`/api/admin/invites/${id}`, { method: "DELETE" }),
-  },
   users: {
     listAdmin: () => request<{ rows: any[] }>("/api/admin/users"),
   },
@@ -144,6 +119,23 @@ export const api = {
       request<{ ok: boolean; processed: number; mode: "replace" | "increment" }>("/api/posts/upsert", {
         method: "POST",
         body: JSON.stringify({ posts, mode }),
+      }),
+  },
+  meta: {
+    config: () => request<MetaConfigResponse>("/api/meta/config"),
+    saveConfig: (payload: {
+      instagramUserId: string;
+      accessToken?: string;
+      enabled: boolean;
+      syncIntervalMinutes: number;
+    }) =>
+      request<MetaConfigResponse>("/api/meta/config", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    sync: () =>
+      request<{ ok: boolean; processed: number; syncedAt: string }>("/api/meta/sync", {
+        method: "POST",
       }),
   },
   activity: {

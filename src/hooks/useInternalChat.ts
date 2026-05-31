@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, AUTH_BYPASS_ENABLED } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -29,10 +29,6 @@ export function useInternalChat() {
 
   const fetchUsers = useCallback(async () => {
     if (!user) return;
-    if (AUTH_BYPASS_ENABLED) {
-      setUsers([]);
-      return;
-    }
     try {
       const { rows } = await api.chat.users();
       setUsers(rows || []);
@@ -43,11 +39,6 @@ export function useInternalChat() {
 
   const fetchMessages = useCallback(async () => {
     if (!user) return;
-    if (AUTH_BYPASS_ENABLED) {
-      setMessages([]);
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     try {
       const { rows } = await api.chat.messages(selectedUser);
@@ -61,10 +52,6 @@ export function useInternalChat() {
 
   const sendMessage = async (content: string) => {
     if (!user || !content.trim()) return false;
-    if (AUTH_BYPASS_ENABLED) {
-      toast.info('Chat interno indisponível no modo sem login.');
-      return false;
-    }
     try {
       await api.chat.send(content.trim(), selectedUser);
       await fetchMessages();

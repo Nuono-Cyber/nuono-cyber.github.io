@@ -30,53 +30,40 @@ npm run dev
 
 O aplicativo estará disponível em `http://localhost:5173`
 
-### Publicando no GitHub Pages
+### Publicação
 
-O projeto já está configurado com um fluxo de trabalho GitHub Actions (`.github/workflows/deploy.yml`) que:
-
-1. Instala as dependências;
-2. Executa `npm run build`;
-3. Empacota o diretório `dist` e faz o deploy para a página do repositório.
-
-> ⚠️ **Importante**: apenas o branch `main` é observado. A página é publicada a partir do conteúdo do diretório `dist`.
-
-Para ativar a hospedagem, verifique nas configurações do repositório (`Settings → Pages`) se a fonte está definida para a branch `gh-pages` (ou deixe o workflow criar e configurar automaticamente).
-
-Se você vir uma tela em branco ao abrir `https://nuono-cyber.github.io`, provavelmente algum outro workflow anterior estava sobrescrevendo os arquivos com a raiz do repositório. Este repositório agora só usa o workflow acima — outros arquivos de workflow antigos foram removidos.
+O frontend pode continuar hospedado no GitHub Pages, mas a API precisa rodar em um backend Node com acesso ao Supabase. O arquivo [render.yaml](/home/nunerd/Área%20de%20trabalho/INSTAGRAM_SITE/nuono-cyber.github.io/render.yaml:1) já está preparado para publicar essa API no Render.
 
 ## 📈 Gerenciamento de Dados do Instagram
 
-A plataforma suporta upload e análise de dados do Instagram através de arquivos CSV e importação via Google Sheets, com processamento inteligente e sincronização em tempo real com o banco de dados cloud.
+A plataforma suporta upload e análise de dados do Instagram com persistência no Supabase, além de sincronização automática via Meta Graph API.
 
-### Formatos Suportados
+Sincronização com Meta Graph API
+--------------------------------
+Agora o backend também pode buscar posts e métricas diretamente da Meta, sem depender de upload manual de CSV.
 
-| Formato | Status | Funcionalidade |
-|---------|--------|-----------------|
-| CSV | ✅ Ativo | Upload incremental com upsert automático |
-| Google Sheets | ✅ Ativo | Importação via Supabase Function com Service Account |
+Como configurar:
 
-Google Sheets (Service Account)
--------------------------------
-Para importar automaticamente dados do Google Sheets usando uma Service Account e a função Supabase:
+1. Crie um app em Meta for Developers e habilite a Instagram Graph API.
+2. Use uma conta Instagram Business ou Creator vinculada a uma Facebook Page.
+3. Gere um access token de longa duração com permissões para leitura de perfil e insights do Instagram.
+4. Descubra o `Instagram User ID` da conta conectada.
+5. No painel, abra `Importar Dados` e preencha `Instagram User ID`, `Access Token` e o intervalo do sync.
+6. Salve a conexão e clique em `Sincronizar agora` para popular a base inicial.
 
-- Adicione a variável de ambiente `GOOGLE_SERVICE_ACCOUNT` no dashboard do Supabase Functions contendo o JSON da service account (stringificada).
-- A função `sheets-sync` foi adicionada em `supabase/functions/sheets-sync` — ela expõe um endpoint que lê `spreadsheetId` e `range` no corpo e retorna as linhas como objetos (usando a primeira linha como cabeçalho).
-- No frontend, use `supabase.functions.invoke('sheets-sync', { body: { action: 'fetch', spreadsheetId, range } })` para buscar os dados e repassar ao processador CSV.
+Variáveis de ambiente suportadas:
 
-Observação de segurança: nunca comite o JSON da service account no repositório. Prefira armazená-lo como variável de ambiente no Supabase ou em um segredo do CI/CD.
+- `META_GRAPH_API_VERSION`: versão da Graph API usada pelo backend. Ex.: `v23.0`
+- `META_SYNC_ENABLED`: ativa o sync automático ao subir o servidor
+- `META_SYNC_INTERVAL_MINUTES`: intervalo mínimo entre sincronizações automáticas
+- `META_INSTAGRAM_USER_ID`: ID da conta do Instagram
+- `META_ACCESS_TOKEN`: token salvo diretamente no backend no boot inicial
 
-Agendamento (sync automático)
------------------------------
-Para sincronizar automaticamente (ex.: a cada hora), configure um agendamento que invoque a função `sheets-sync` com `action: 'sync'` e o `spreadsheetId` no corpo. Exemplo usando `curl` e a Service Role Key:
+Observações:
 
-```bash
-curl -X POST "https://<your-project>.functions.supabase.co/sheets-sync" \
-	-H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-	-H "Content-Type: application/json" \
-	-d '{"action":"sync","spreadsheetId":"YOUR_SPREADSHEET_ID","range":"A:Z"}'
-```
-
-Você pode criar um agendamento no seu provedor de cron (CRON job), GitHub Actions, ou usar o scheduler do próprio Supabase para chamar essa rota periodicamente.
+- O sync automático roda no backend Node. Se a aplicação estiver só no GitHub Pages sem a API publicada, ele não executa.
+- O token é armazenado na tabela `meta_sync_config` do Supabase. Em produção, restrinja o acesso ao painel administrativo.
+- A Meta entrega métricas diferentes por tipo de mídia; quando uma métrica não existir para aquele post, o sistema grava `0`.
 
 ### Estrutura de Dados
 
@@ -97,11 +84,11 @@ Os arquivos devem conter as seguintes colunas:
 
 ### Como Usar
 
-1. Faça login como **Super Admin**
-2. Acesse a aba **"Gerenciar Dados"** no dashboard
-3. Selecione seu arquivo CSV ou importe uma planilha Google Sheets
-4. Clique em **Importar**
-5. Os dados serão processados e salvos automaticamente
+1. Publique a migration SQL em `supabase/migrations`
+2. Configure `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no backend
+3. Faça login com um dos super admins
+4. No primeiro acesso, use a senha temporária `Senha123##` e redefina a senha
+5. Acesse a aba **"Importar Dados"** para subir arquivos ou configurar o sync da Meta
 
 ## 🛠 Stack Tecnológico
 
@@ -111,14 +98,14 @@ Os arquivos devem conter as seguintes colunas:
 | **Build** | Vite |
 | **UI Components** | shadcn-ui |
 | **Styling** | Tailwind CSS |
-| **Backend** | Supabase (PostgreSQL + Auth) |
+| **Backend** | Node.js + Supabase (PostgreSQL) |
 | **Real-time** | Supabase Realtime |
 | **Testing** | Vitest |
 
 ## ⚙️ Funcionalidades Principais
 
 - 📊 **Dashboard Interativo** - Visualizações em tempo real
-- 🔐 **Autenticação Segura** - Sistema de convites e roles
+- 🔐 **Autenticação Segura** - Super admins com troca obrigatória de senha no primeiro acesso
 - 💬 **Chat Interno** - Comunicação entre admins
 - 📈 **Análises Avançadas** - 9 abas de análise diferenciadas
 - 🎨 **Tema Personalizável** - Dark/Light mode

@@ -9,7 +9,6 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
-import InviteAdmin from "./pages/InviteAdmin";
 import ResetPassword from "./pages/ResetPassword";
 import AdminActivityLogs from "./pages/AdminActivityLogs";
 import NotFound from "./pages/NotFound";
@@ -40,14 +39,6 @@ const App = () => (
                 element={
                   <ProtectedRoute requireSuperAdmin>
                     <Admin />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin/invites" 
-                element={
-                  <ProtectedRoute requireSuperAdmin>
-                    <InviteAdmin />
                   </ProtectedRoute>
                 } 
               />

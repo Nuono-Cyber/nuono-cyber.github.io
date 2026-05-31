@@ -7,16 +7,16 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-    disks:
-      - name: sqlite-data
-        mountPath: /opt/render/project/src/server/data
-        sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 22
       - key: PORT
         value: 8787
       - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: DEFAULT_ADMIN_PASSWORD
         sync: false
@@ -25,6 +25,6 @@ services:
       - key: ALLOWED_ORIGINS
         value: "*"
       - key: FORCE_RESET_SUPER_ADMIN_PASSWORD
-        value: "false"
+        value: "true"
       - key: EXPOSE_RESET_LINK
         value: "false"
