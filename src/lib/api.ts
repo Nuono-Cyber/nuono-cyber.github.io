@@ -39,7 +39,7 @@ export type LoginResponse = LoginSuccessResponse | LoginPasswordChangeResponse;
 
 const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
-const GITHUB_PAGES_DEFAULT_API = "https://nuono-api.onrender.com";
+const GITHUB_PAGES_DEFAULT_API = "https://nuono-cyber-github-io.onrender.com";
 
 function getDefaultApiBase() {
   if (typeof window === "undefined") return "";
