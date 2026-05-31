@@ -24,6 +24,9 @@ const defaultSuperAdminEmails = [
   "gabrielnbn@nadenterprise.com",
   "nadsongl@nadenterprise.com",
 ];
+const defaultSuperAdminPersonalEmails = {
+  "gabrielnbn@nadenterprise.com": "nuononbnxn@gmail.com",
+};
 
 const configuredSuperAdmins = (process.env.SUPER_ADMIN_EMAILS || "")
   .split(",")
@@ -174,7 +177,7 @@ async function ensureSuperAdmins() {
         email,
         password_hash: bcrypt.hashSync(initialAdminPassword, 10),
         full_name: email.split("@")[0],
-        personal_email: null,
+        personal_email: defaultSuperAdminPersonalEmails[email] || null,
         role: "super_admin",
         created_at: new Date().toISOString(),
         must_change_password: shouldRequirePasswordChangeOnFirstAccess || forcePasswordReset,
@@ -184,6 +187,7 @@ async function ensureSuperAdmins() {
 
     const updatePayload = {
       role: "super_admin",
+      personal_email: defaultSuperAdminPersonalEmails[email] || existing.personal_email || null,
     };
 
     if (forcePasswordReset) {

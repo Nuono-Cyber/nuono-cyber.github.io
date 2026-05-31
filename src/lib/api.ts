@@ -99,8 +99,8 @@ export const api = {
         body: JSON.stringify({ email, password }),
       }),
     session: () => request<{ user: AppUser }>("/api/auth/session"),
-    requestReset: (payload: { corporateEmail: string }) =>
-      request<{ ok: boolean; resetLink?: string }>("/api/auth/password-reset/request", {
+    requestReset: (payload: { corporateEmail: string; personalEmail?: string }) =>
+      request<{ ok: boolean; resetLink?: string; deliveryEmail?: string | null }>("/api/auth/password-reset/request", {
         method: "POST",
         body: JSON.stringify(payload),
       }),

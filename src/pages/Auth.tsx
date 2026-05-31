@@ -15,6 +15,7 @@ const emailSchema = z.string().email('Email inválido').refine(
   (email) => email.toLowerCase().endsWith('@nadenterprise.com'),
   'Apenas emails @nadenterprise.com são permitidos'
 );
+const personalEmailSchema = z.string().email('Email pessoal inválido');
 const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracteres');
 
 export default function Auth() {
@@ -29,6 +30,7 @@ export default function Auth() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [resetPersonalEmail, setResetPersonalEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
@@ -67,13 +69,20 @@ export default function Auth() {
     setIsResetting(true);
     try {
       if (!emailSchema.safeParse(resetEmail).success) throw new Error('Email corporativo inválido');
+      if (resetPersonalEmail && !personalEmailSchema.safeParse(resetPersonalEmail).success) {
+        throw new Error('Email pessoal inválido');
+      }
       const data = await api.auth.requestReset({
         corporateEmail: resetEmail,
+        personalEmail: resetPersonalEmail || undefined,
       });
       setShowResetDialog(false);
       setResetEmail('');
+      setResetPersonalEmail('');
       if (data.resetLink) {
         setSuccess(`Link de recuperação: ${window.location.origin}${data.resetLink}`);
+      } else if (data.deliveryEmail) {
+        setSuccess(`Solicitação registrada para o email pessoal ${data.deliveryEmail}.`);
       } else {
         setSuccess('Solicitação de recuperação enviada.');
       }
@@ -148,6 +157,16 @@ export default function Auth() {
             <div className="space-y-2">
               <Label htmlFor="reset-email">Email Corporativo</Label>
               <Input id="reset-email" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-personal-email">Email Pessoal</Label>
+              <Input
+                id="reset-personal-email"
+                type="email"
+                value={resetPersonalEmail}
+                onChange={(e) => setResetPersonalEmail(e.target.value)}
+                placeholder="Necessário para contas com email pessoal cadastrado"
+              />
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setShowResetDialog(false)}>Cancelar</Button>

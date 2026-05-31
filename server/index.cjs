@@ -211,6 +211,7 @@ app.get("/api/auth/session", authRequired, async (req, res) => {
 
 app.post("/api/auth/password-reset/request", authLimiter, async (req, res) => {
   const corporateEmail = String(req.body?.corporateEmail || "").toLowerCase().trim();
+  const personalEmail = String(req.body?.personalEmail || "").toLowerCase().trim();
   const user = await getSingleRow("users", {
     select: "*",
     email: `eq.${corporateEmail}`,
@@ -218,6 +219,15 @@ app.post("/api/auth/password-reset/request", authLimiter, async (req, res) => {
 
   if (!user) {
     return res.status(400).json({ error: "Usuário não encontrado" });
+  }
+
+  if (user.personal_email) {
+    if (!personalEmail) {
+      return res.status(400).json({ error: "Informe o email pessoal cadastrado para continuar." });
+    }
+    if (personalEmail !== String(user.personal_email).toLowerCase()) {
+      return res.status(400).json({ error: "O email pessoal informado não confere." });
+    }
   }
 
   const token = uuidv4();
@@ -233,8 +243,8 @@ app.post("/api/auth/password-reset/request", authLimiter, async (req, res) => {
     used_at: null,
   });
 
-  const response = { ok: true };
-  if (exposeResetLink) {
+  const response = { ok: true, deliveryEmail: user.personal_email || null };
+  if (exposeResetLink || Boolean(user.personal_email && personalEmail)) {
     response.resetLink = `/auth/reset-password?token=${token}`;
   }
   res.json(response);
