@@ -175,18 +175,15 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
       email: `eq.${email}`,
     });
 
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-      return res.status(401).json({ error: "Email ou senha incorretos" });
+    if (user?.must_change_password) {
+      return res.status(403).json({
+        error: "Primeiro acesso requer um link unico de ativacao. Use a opcao Primeiro acesso na tela de login.",
+        requiresFirstAccessLink: true,
+      });
     }
 
-    if (user.must_change_password) {
-      const reset = await issuePasswordResetToken(user.id);
-      return res.json({
-        ok: true,
-        requiresPasswordChange: true,
-        resetToken: reset.token,
-        resetPath: reset.resetPath,
-      });
+    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+      return res.status(401).json({ error: "Email ou senha incorretos" });
     }
 
     const token = createToken(user);
@@ -198,6 +195,31 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error instanceof Error ? error.message : "Falha no login" });
   }
+});
+
+app.post("/api/auth/first-access/request", authLimiter, async (req, res) => {
+  const corporateEmail = String(req.body?.corporateEmail || "").toLowerCase().trim();
+
+  const user = await getSingleRow("users", {
+    select: "*",
+    email: `eq.${corporateEmail}`,
+  });
+
+  if (!user) {
+    return res.status(400).json({ error: "Usuário não encontrado" });
+  }
+
+  if (!user.must_change_password) {
+    return res.status(400).json({ error: "Este usuário já ativou o acesso. Use o fluxo normal de recuperação de senha." });
+  }
+
+  const reset = await issuePasswordResetToken(user.id);
+  return res.json({
+    ok: true,
+    resetToken: reset.token,
+    resetPath: reset.resetPath,
+    resetLink: reset.resetPath,
+  });
 });
 
 app.get("/api/auth/session", authRequired, async (req, res) => {

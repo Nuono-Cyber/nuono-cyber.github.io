@@ -8,6 +8,7 @@ type SignInResult = {
   requiresPasswordChange?: boolean;
   resetPath?: string;
   resetToken?: string;
+  requiresFirstAccessLink?: boolean;
 };
 
 interface AuthState {
@@ -74,6 +75,12 @@ export function useAuth() {
       await logActivity('login', { email });
       return { error: null } as SignInResult;
     } catch (error: any) {
+      if (error?.message?.includes('Primeiro acesso requer um link unico de ativacao')) {
+        return {
+          error,
+          requiresFirstAccessLink: true,
+        } as SignInResult;
+      }
       return { error } as SignInResult;
     }
   };
