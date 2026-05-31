@@ -28,7 +28,6 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showResetDialog, setShowResetDialog] = useState(false);
-  const [resetMode, setResetMode] = useState<'first-access' | 'password-reset'>('password-reset');
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
@@ -45,7 +44,7 @@ export default function Auth() {
     setSuccess(null);
     setIsLoading(true);
     try {
-      const { error: signInError, requiresPasswordChange, requiresFirstAccessLink, resetPath } = await signIn(email, password);
+      const { error: signInError, requiresPasswordChange, resetPath } = await signIn(email, password);
       if (requiresPasswordChange && resetPath) {
         navigate(resetPath, {
           replace: true,
@@ -54,12 +53,6 @@ export default function Auth() {
             firstAccess: true,
           },
         });
-        return;
-      }
-      if (requiresFirstAccessLink) {
-        setResetMode('first-access');
-        setResetEmail(email);
-        setShowResetDialog(true);
         return;
       }
       if (signInError) setError(signInError.message || 'Erro ao fazer login');
@@ -74,18 +67,13 @@ export default function Auth() {
     setIsResetting(true);
     try {
       if (!emailSchema.safeParse(resetEmail).success) throw new Error('Email corporativo inválido');
-      const data = resetMode === 'first-access'
-        ? await api.auth.requestFirstAccess({ corporateEmail: resetEmail })
-        : await api.auth.requestReset({ corporateEmail: resetEmail });
+      const data = await api.auth.requestReset({
+        corporateEmail: resetEmail,
+      });
       setShowResetDialog(false);
       setResetEmail('');
-      if ('resetLink' in data && data.resetLink) {
-        const fullLink = `${window.location.origin}${data.resetLink}`;
-        setSuccess(resetMode === 'first-access' ? `Link único de primeiro acesso: ${fullLink}` : `Link de recuperação: ${fullLink}`);
-        navigate(data.resetPath || data.resetLink, {
-          replace: true,
-          state: { firstAccess: resetMode === 'first-access' },
-        });
+      if (data.resetLink) {
+        setSuccess(`Link de recuperação: ${window.location.origin}${data.resetLink}`);
       } else {
         setSuccess('Solicitação de recuperação enviada.');
       }
@@ -110,7 +98,7 @@ export default function Auth() {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Acesso ao Painel</CardTitle>
-            <CardDescription>Primeiro acesso agora usa um link único de ativação. Senhas temporárias compartilhadas foram removidas.</CardDescription>
+            <CardDescription>Use um dos logins administrativos configurados no sistema.</CardDescription>
           </CardHeader>
           <CardContent>
             {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
@@ -136,22 +124,9 @@ export default function Auth() {
               </Button>
               <Button
                 type="button"
-                variant="secondary"
-                className="w-full"
-                onClick={() => {
-                  setResetMode('first-access');
-                  setResetEmail(email);
-                  setShowResetDialog(true);
-                }}
-              >
-                Primeiro acesso
-              </Button>
-              <Button
-                type="button"
                 variant="link"
                 className="w-full"
                 onClick={() => {
-                  setResetMode('password-reset');
                   setResetEmail(email);
                   setShowResetDialog(true);
                 }}
@@ -166,12 +141,8 @@ export default function Auth() {
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{resetMode === 'first-access' ? 'Primeiro acesso' : 'Recuperar Senha'}</DialogTitle>
-            <DialogDescription>
-              {resetMode === 'first-access'
-                ? 'Informe seu email corporativo para gerar um link único de ativação. Esse link pode ser usado uma única vez.'
-                : 'Informe seu email corporativo para gerar um novo link de redefinição.'}
-            </DialogDescription>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>Informe seu email corporativo para gerar um novo link de redefinição.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="space-y-2">

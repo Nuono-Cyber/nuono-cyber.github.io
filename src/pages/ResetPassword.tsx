@@ -57,7 +57,7 @@ export default function ResetPassword() {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>{isFirstAccess ? 'Defina sua nova senha' : 'Redefinir Senha'}</CardTitle>
-            <CardDescription>{isFirstAccess ? 'Este link de primeiro acesso e unico. Defina agora sua senha definitiva.' : 'Defina uma nova senha para sua conta'}</CardDescription>
+            <CardDescription>{isFirstAccess ? 'O acesso inicial usa a senha temporária Senha123##. Cadastre agora sua senha definitiva.' : 'Defina uma nova senha para sua conta'}</CardDescription>
           </CardHeader>
           <CardContent>
             {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}

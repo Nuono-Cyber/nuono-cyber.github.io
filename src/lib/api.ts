@@ -16,11 +16,6 @@ export interface LoginSuccessResponse {
   requiresPasswordChange?: false;
 }
 
-export interface FirstAccessRequiredResponse {
-  error: string;
-  requiresFirstAccessLink: true;
-}
-
 export interface MetaConfigResponse {
   configured: boolean;
   instagramUserId: string;
@@ -102,11 +97,6 @@ export const api = {
       request<LoginResponse>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
-      }),
-    requestFirstAccess: (payload: { corporateEmail: string }) =>
-      request<{ ok: boolean; resetLink: string; resetPath: string; resetToken: string }>("/api/auth/first-access/request", {
-        method: "POST",
-        body: JSON.stringify(payload),
       }),
     session: () => request<{ user: AppUser }>("/api/auth/session"),
     requestReset: (payload: { corporateEmail: string }) =>

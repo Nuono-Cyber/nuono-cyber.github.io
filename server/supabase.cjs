@@ -1,5 +1,4 @@
 const bcrypt = require("bcryptjs");
-const crypto = require("node:crypto");
 const { v4: uuidv4 } = require("uuid");
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -10,11 +9,15 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const isProduction = process.env.NODE_ENV === "production";
+const configuredAdminPassword = (process.env.DEFAULT_ADMIN_PASSWORD || "").trim();
+const temporarySuperAdminPassword = "Senha123##";
 const forcePasswordReset =
   String(process.env.FORCE_RESET_SUPER_ADMIN_PASSWORD || "").toLowerCase() === "true";
+const initialAdminPassword = configuredAdminPassword || (isProduction ? "" : temporarySuperAdminPassword);
+const shouldRequirePasswordChangeOnFirstAccess = initialAdminPassword === temporarySuperAdminPassword;
 
-function generateHiddenBootstrapPassword() {
-  return crypto.randomBytes(32).toString("hex");
+if (!initialAdminPassword) {
+  throw new Error("DEFAULT_ADMIN_PASSWORD is required in production.");
 }
 
 const defaultSuperAdminEmails = [
@@ -169,12 +172,12 @@ async function ensureSuperAdmins() {
       await insertRows("users", {
         id: uuidv4(),
         email,
-        password_hash: bcrypt.hashSync(generateHiddenBootstrapPassword(), 10),
+        password_hash: bcrypt.hashSync(initialAdminPassword, 10),
         full_name: email.split("@")[0],
         personal_email: null,
         role: "super_admin",
         created_at: new Date().toISOString(),
-        must_change_password: true,
+        must_change_password: shouldRequirePasswordChangeOnFirstAccess || forcePasswordReset,
       });
       continue;
     }
@@ -184,7 +187,7 @@ async function ensureSuperAdmins() {
     };
 
     if (forcePasswordReset) {
-      updatePayload.password_hash = bcrypt.hashSync(generateHiddenBootstrapPassword(), 10);
+      updatePayload.password_hash = bcrypt.hashSync(initialAdminPassword, 10);
       updatePayload.must_change_password = true;
     }
 
