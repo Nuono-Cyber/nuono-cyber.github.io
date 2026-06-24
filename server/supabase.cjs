@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+const SUPABASE_TIMEOUT_MS = Number(process.env.SUPABASE_TIMEOUT_MS || 15000);
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
@@ -47,8 +48,11 @@ function buildUrl(pathname, query = {}) {
 }
 
 async function supabaseRequest(pathname, { method = "GET", query, body, headers = {}, allow404 = false } = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
   const response = await fetch(buildUrl(pathname, query), {
     method,
+    signal: controller.signal,
     headers: {
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -56,7 +60,7 @@ async function supabaseRequest(pathname, { method = "GET", query, body, headers 
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  }).finally(() => clearTimeout(timeoutId));
 
   if (allow404 && response.status === 404) {
     return null;
@@ -84,6 +88,21 @@ async function supabaseRequest(pathname, { method = "GET", query, body, headers 
 async function listRows(table, query = {}) {
   const { data } = await supabaseRequest(table, { query });
   return Array.isArray(data) ? data : [];
+}
+
+async function listRowsWithCount(table, query = {}) {
+  const { headers, data } = await supabaseRequest(table, {
+    query,
+    headers: {
+      Prefer: "count=exact",
+    },
+  });
+  const contentRange = headers.get("content-range") || "";
+  const count = Number(contentRange.split("/")[1] || 0);
+  return {
+    rows: Array.isArray(data) ? data : [],
+    count: Number.isFinite(count) ? count : 0,
+  };
 }
 
 async function getSingleRow(table, query = {}) {
@@ -206,6 +225,7 @@ module.exports = {
   SUPABASE_SERVICE_ROLE_KEY,
   uuidv4,
   listRows,
+  listRowsWithCount,
   getSingleRow,
   insertRows,
   updateRows,

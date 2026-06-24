@@ -1,32 +1,38 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-export type Theme = 'dark' | 'light' | 'dracula';
+export type Theme = 'red' | 'blue' | 'enterprise';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  themes: { value: Theme; label: string; icon: string }[];
+  themes: { value: Theme; label: string; swatch: string }[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const themes: { value: Theme; label: string; icon: string }[] = [
-  { value: 'dark', label: 'Dark', icon: '🌙' },
-  { value: 'light', label: 'Light', icon: '☀️' },
-  { value: 'dracula', label: 'Dracula', icon: '🧛' },
+const themes: { value: Theme; label: string; swatch: string }[] = [
+  { value: 'red', label: 'Vermelho', swatch: 'bg-red-500' },
+  { value: 'blue', label: 'Azul', swatch: 'bg-blue-500' },
+  { value: 'enterprise', label: 'Empresarial', swatch: 'bg-slate-500' },
 ];
+
+function normalizeTheme(value: string | null): Theme {
+  if (value === 'blue' || value === 'enterprise' || value === 'red') return value;
+  if (value === 'light') return 'enterprise';
+  return 'red';
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem('app-theme');
-    return (stored as Theme) || 'dark';
+    return normalizeTheme(stored);
   });
 
   useEffect(() => {
     const root = document.documentElement;
     
     // Remove all theme classes
-    root.classList.remove('theme-dark', 'theme-light', 'theme-dracula');
+    root.classList.remove('theme-dark', 'theme-light', 'theme-dracula', 'theme-red', 'theme-blue', 'theme-enterprise');
     
     // Add current theme class
     root.classList.add(`theme-${theme}`);

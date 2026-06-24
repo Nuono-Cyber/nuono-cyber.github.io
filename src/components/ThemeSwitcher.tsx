@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Palette, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function ThemeSwitcher() {
   const { theme, setTheme, themes } = useTheme();
@@ -26,7 +27,7 @@ export function ThemeSwitcher() {
             onClick={() => setTheme(t.value)}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <span>{t.icon}</span>
+            <span className={cn('h-3 w-3 rounded-full border border-border', t.swatch)} />
             <span>{t.label}</span>
             {theme === t.value && <Check className="ml-auto h-4 w-4" />}
           </DropdownMenuItem>

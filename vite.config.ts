@@ -27,6 +27,7 @@ export default defineConfig(() => ({
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
           charts: ["recharts"],
+          three: ["three"],
           markdown: ["react-markdown"],
           data: ["papaparse", "date-fns"],
         },

@@ -9,6 +9,8 @@ const {
 const META_CONFIG_ID = "default";
 const DEFAULT_API_VERSION = (process.env.META_GRAPH_API_VERSION || "v23.0").trim();
 const DEFAULT_SYNC_INTERVAL_MINUTES = clampInterval(process.env.META_SYNC_INTERVAL_MINUTES);
+const META_MEDIA_LIMIT = Math.max(1, Math.min(1000, Number(process.env.META_MEDIA_LIMIT || 500)));
+const META_INSIGHTS_CONCURRENCY = Math.max(1, Math.min(10, Number(process.env.META_INSIGHTS_CONCURRENCY || 5)));
 
 let syncInFlight = null;
 
@@ -173,9 +175,28 @@ async function fetchAllMedia(instagramUserId, accessToken) {
     }
 
     afterCursor = response?.paging?.cursors?.after || null;
-  } while (afterCursor);
+  } while (afterCursor && items.length < META_MEDIA_LIMIT);
 
-  return items;
+  return items.slice(0, META_MEDIA_LIMIT);
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+
+  return results;
 }
 
 async function fetchAccountProfile(instagramUserId, accessToken) {
@@ -253,12 +274,10 @@ async function syncInstagramFromMeta() {
     try {
       const profile = await fetchAccountProfile(config.instagram_user_id, config.access_token);
       const mediaItems = await fetchAllMedia(config.instagram_user_id, config.access_token);
-      const posts = [];
-
-      for (const media of mediaItems) {
+      const posts = await mapWithConcurrency(mediaItems, META_INSIGHTS_CONCURRENCY, async (media) => {
         const insights = await fetchInsightsForMedia(media.id, config.access_token);
-        posts.push(mapMediaToDbPost(media, insights, profile, config.instagram_user_id));
-      }
+        return mapMediaToDbPost(media, insights, profile, config.instagram_user_id);
+      });
 
       if (posts.length > 0) {
         await insertRows("instagram_posts", posts, {

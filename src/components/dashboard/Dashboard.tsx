@@ -15,8 +15,9 @@ import { BenchmarkTab } from './tabs/BenchmarkTab';
 import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
+import { ScrollMetricsScene } from './ScrollMetricsScene';
 import { InternalChat } from '@/components/chat/InternalChat';
-import { Loader2, Instagram, Calendar, BarChart3, LogOut } from 'lucide-react';
+import { Loader2, Instagram, Calendar, BarChart3, LogOut, RefreshCw, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -35,7 +36,18 @@ const TAB_TITLES: Record<string, { title: string; description: string }> = {
 };
 
 export function Dashboard() {
-  const { posts, isLoading, error, summary, addUploadedData, isSaving, refreshData } = useInstagramData();
+  const {
+    posts,
+    isLoading,
+    error,
+    summary,
+    addUploadedData,
+    isSaving,
+    refreshData,
+    totalAvailable,
+    isLimited,
+    lastLoadedAt,
+  } = useInstagramData();
   const { isSuperAdmin, signOut } = useAuthContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
@@ -71,7 +83,11 @@ export function Dashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 p-8 rounded-xl bg-destructive/10 border border-destructive/30 max-w-md">
           <p className="text-destructive font-medium">{error}</p>
-          <p className="text-sm text-muted-foreground">Verifique se o arquivo de dados está disponível.</p>
+          <p className="text-sm text-muted-foreground">Verifique se o backend publicado e o Supabase estão respondendo.</p>
+          <Button variant="outline" onClick={refreshData} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );
@@ -112,9 +128,10 @@ export function Dashboard() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background relative">
         <WeatherBackground effect={weatherEffect} onEffectChange={setWeatherEffect} />
+        <ScrollMetricsScene />
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative z-10">
           {/* Enterprise Header */}
           <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
             <div className="flex items-center justify-between px-6 h-14">
@@ -140,6 +157,10 @@ export function Dashboard() {
                     <BarChart3 className="w-3 h-3" />
                     {posts.length} posts
                   </Badge>
+                  <Badge variant={isLimited ? 'secondary' : 'outline'} className="text-[10px] font-normal gap-1.5 py-1">
+                    <Database className="w-3 h-3" />
+                    {isLimited ? `${posts.length}/${totalAvailable}` : `${totalAvailable || posts.length}`} registros
+                  </Badge>
                   {posts.length > 0 && (
                     <Badge variant="outline" className="text-[10px] font-normal gap-1.5 py-1">
                       <Calendar className="w-3 h-3" />
@@ -158,6 +179,18 @@ export function Dashboard() {
           {/* Main Content */}
           <main className="flex-1 p-6 overflow-auto">
             <div className="max-w-[1600px] mx-auto">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>
+                  {posts.length > 0
+                    ? `Dados carregados: ${posts.length}${isLimited ? ` de ${totalAvailable}` : ''} posts disponíveis para análise.`
+                    : 'Nenhum post carregado ainda.'}
+                  {lastLoadedAt ? ` Atualizado às ${lastLoadedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : ''}
+                </span>
+                <Button variant="ghost" size="sm" onClick={refreshData} className="h-8 gap-2">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Atualizar
+                </Button>
+              </div>
               {renderContent()}
             </div>
           </main>

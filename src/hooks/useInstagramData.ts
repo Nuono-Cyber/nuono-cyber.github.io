@@ -116,12 +116,15 @@ export function useInstagramData() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [totalAvailable, setTotalAvailable] = useState(0);
+  const [isLimited, setIsLimited] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   // Load data from database
   const loadFromDatabase = async () => {
     try {
       setIsLoading(true);
-      const { rows: data } = await api.posts.list();
+      const { rows: data, meta } = await api.posts.list({ limit: 1500 });
 
       if (data && data.length > 0) {
         const instagramPosts = data.map(dbPostToInstagramPost);
@@ -129,10 +132,13 @@ export function useInstagramData() {
       } else {
         setPosts([]);
       }
+      setTotalAvailable(meta?.count || data?.length || 0);
+      setIsLimited(Boolean(meta?.limited));
+      setLastLoadedAt(new Date());
       setError(null);
     } catch (err: any) {
       console.error('Error loading from database:', err);
-      setError('Erro ao carregar dados do Instagram');
+      setError(err?.message || 'Erro ao carregar dados do Instagram');
     } finally {
       setIsLoading(false);
     }
@@ -221,6 +227,9 @@ export function useInstagramData() {
     summary, 
     addUploadedData, 
     isSaving,
-    refreshData: loadFromDatabase
+    refreshData: loadFromDatabase,
+    totalAvailable,
+    isLimited,
+    lastLoadedAt,
   };
 }

@@ -5,13 +5,78 @@
 @tailwind utilities;
 
 @layer base {
-  /* Default Dark Theme - Enterprise Slate */
+  /* Default Red Theme */
   :root,
-  .theme-dark {
-    --instagram-purple: 250 70% 60%;
-    --instagram-pink: 340 65% 55%;
+  .theme-red {
+    --instagram-purple: 0 78% 58%;
+    --instagram-pink: 346 74% 56%;
     --instagram-orange: 25 85% 55%;
     --instagram-yellow: 45 85% 55%;
+    
+    --background: 228 24% 6%;
+    --foreground: 210 20% 96%;
+
+    --card: 228 22% 9%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 228 22% 8%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 0 78% 54%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 228 18% 13%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 228 18% 15%;
+    --muted-foreground: 220 15% 55%;
+
+    --accent: 216 74% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 78% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 228 18% 15%;
+    --input: 228 18% 15%;
+    --ring: 0 78% 54%;
+
+    --radius: 0.625rem;
+
+    --success: 152 60% 48%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 224 30% 5%;
+    --info: 200 90% 55%;
+    --info-foreground: 0 0% 100%;
+    
+    --chart-1: 0 78% 54%;
+    --chart-2: 216 74% 55%;
+    --chart-3: 152 60% 48%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 200 90% 55%;
+    --chart-6: 340 65% 55%;
+
+    --glass-bg: 228 22% 9% / 0.85;
+    --glass-border: 228 18% 18% / 0.5;
+    --glass-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
+
+    --sidebar-background: 228 26% 5%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 0 78% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 18% 11%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 228 18% 13%;
+    --sidebar-ring: 0 78% 54%;
+  }
+
+  /* Blue Theme */
+  .theme-blue {
+    --instagram-purple: 220 65% 50%;
+    --instagram-pink: 340 55% 50%;
+    --instagram-orange: 25 75% 50%;
+    --instagram-yellow: 45 80% 48%;
     
     --background: 224 30% 5%;
     --foreground: 210 20% 95%;
@@ -34,28 +99,26 @@
     --accent: 250 60% 58%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 68% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 224 20% 14%;
     --input: 224 20% 14%;
     --ring: 220 80% 58%;
 
-    --radius: 0.625rem;
-
-    --success: 152 60% 48%;
+    --success: 152 55% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 224 30% 5%;
-    --info: 200 90% 55%;
+    --warning: 38 88% 48%;
+    --warning-foreground: 224 30% 12%;
+    --info: 200 85% 45%;
     --info-foreground: 0 0% 100%;
-    
+
     --chart-1: 220 80% 58%;
     --chart-2: 250 60% 58%;
-    --chart-3: 152 60% 48%;
-    --chart-4: 38 92% 55%;
-    --chart-5: 200 90% 55%;
-    --chart-6: 340 65% 55%;
+    --chart-3: 152 55% 40%;
+    --chart-4: 38 88% 48%;
+    --chart-5: 200 85% 45%;
+    --chart-6: 340 55% 50%;
 
     --glass-bg: 224 25% 8% / 0.85;
     --glass-border: 224 20% 18% / 0.5;
@@ -71,130 +134,67 @@
     --sidebar-ring: 220 80% 58%;
   }
 
-  /* Light Theme - Corporate Clean */
-  .theme-light {
-    --instagram-purple: 220 65% 50%;
-    --instagram-pink: 340 55% 50%;
-    --instagram-orange: 25 75% 50%;
-    --instagram-yellow: 45 80% 48%;
+  /* Enterprise Theme */
+  .theme-enterprise {
+    --instagram-purple: 218 50% 42%;
+    --instagram-pink: 350 58% 48%;
+    --instagram-orange: 24 72% 46%;
+    --instagram-yellow: 42 84% 45%;
     
-    --background: 220 14% 96%;
-    --foreground: 224 30% 12%;
+    --background: 210 20% 97%;
+    --foreground: 222 28% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 30% 12%;
+    --card-foreground: 222 28% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 30% 12%;
+    --popover-foreground: 222 28% 13%;
 
-    --primary: 220 75% 48%;
+    --primary: 0 68% 46%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 224 20% 30%;
+    --secondary: 214 20% 92%;
+    --secondary-foreground: 222 24% 24%;
 
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 214 20% 93%;
+    --muted-foreground: 218 10% 42%;
 
-    --accent: 250 55% 52%;
+    --accent: 218 58% 42%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 68% 50%;
+    --destructive: 0 68% 46%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 220 75% 48%;
+    --border: 214 18% 87%;
+    --input: 214 18% 87%;
+    --ring: 0 68% 46%;
 
-    --success: 152 55% 40%;
+    --success: 152 55% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 88% 48%;
-    --warning-foreground: 224 30% 12%;
-    --info: 200 85% 45%;
+    --warning: 38 88% 46%;
+    --warning-foreground: 222 28% 13%;
+    --info: 200 80% 42%;
     --info-foreground: 0 0% 100%;
 
-    --chart-1: 220 75% 48%;
-    --chart-2: 250 55% 52%;
-    --chart-3: 152 55% 40%;
-    --chart-4: 38 88% 48%;
-    --chart-5: 200 85% 45%;
-    --chart-6: 340 55% 50%;
+    --chart-1: 0 68% 46%;
+    --chart-2: 218 58% 42%;
+    --chart-3: 152 55% 38%;
+    --chart-4: 38 88% 46%;
+    --chart-5: 200 80% 42%;
+    --chart-6: 350 58% 48%;
 
-    --glass-bg: 0 0% 100% / 0.9;
-    --glass-border: 220 15% 90% / 0.8;
-    --glass-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+    --glass-bg: 0 0% 100% / 0.92;
+    --glass-border: 214 18% 88% / 0.8;
+    --glass-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 224 30% 12%;
-    --sidebar-primary: 220 75% 48%;
+    --sidebar-foreground: 222 28% 13%;
+    --sidebar-primary: 0 68% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 95%;
-    --sidebar-accent-foreground: 224 20% 30%;
-    --sidebar-border: 220 15% 92%;
-    --sidebar-ring: 220 75% 48%;
-  }
-
-  /* Dracula Theme */
-  .theme-dracula {
-    --instagram-purple: 265 89% 78%;
-    --instagram-pink: 326 100% 74%;
-    --instagram-orange: 31 100% 71%;
-    --instagram-yellow: 65 92% 76%;
-    
-    --background: 231 15% 18%;
-    --foreground: 60 30% 96%;
-
-    --card: 232 14% 21%;
-    --card-foreground: 60 30% 96%;
-
-    --popover: 232 14% 21%;
-    --popover-foreground: 60 30% 96%;
-
-    --primary: 265 89% 78%;
-    --primary-foreground: 231 15% 18%;
-
-    --secondary: 232 14% 25%;
-    --secondary-foreground: 60 30% 96%;
-
-    --muted: 232 14% 25%;
-    --muted-foreground: 225 14% 60%;
-
-    --accent: 326 100% 74%;
-    --accent-foreground: 231 15% 18%;
-
-    --destructive: 0 100% 67%;
-    --destructive-foreground: 60 30% 96%;
-
-    --border: 232 14% 26%;
-    --input: 232 14% 26%;
-    --ring: 265 89% 78%;
-
-    --success: 135 94% 65%;
-    --success-foreground: 231 15% 18%;
-    --warning: 65 92% 76%;
-    --warning-foreground: 231 15% 18%;
-    --info: 191 97% 77%;
-    --info-foreground: 231 15% 18%;
-
-    --chart-1: 265 89% 78%;
-    --chart-2: 326 100% 74%;
-    --chart-3: 135 94% 65%;
-    --chart-4: 65 92% 76%;
-    --chart-5: 191 97% 77%;
-    --chart-6: 31 100% 71%;
-
-    --glass-bg: 232 14% 21% / 0.85;
-    --glass-border: 232 14% 30% / 0.5;
-    --glass-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
-
-    --sidebar-background: 231 15% 16%;
-    --sidebar-foreground: 60 30% 96%;
-    --sidebar-primary: 265 89% 78%;
-    --sidebar-primary-foreground: 231 15% 18%;
-    --sidebar-accent: 232 14% 23%;
-    --sidebar-accent-foreground: 60 30% 96%;
-    --sidebar-border: 232 14% 24%;
-    --sidebar-ring: 265 89% 78%;
+    --sidebar-accent: 214 20% 94%;
+    --sidebar-accent-foreground: 222 24% 24%;
+    --sidebar-border: 214 18% 90%;
+    --sidebar-ring: 0 68% 46%;
   }
 }
 

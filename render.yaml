@@ -23,8 +23,14 @@ services:
       - key: SUPER_ADMIN_EMAILS
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "*"
+        value: "https://nuono-cyber.github.io"
+      - key: SUPABASE_TIMEOUT_MS
+        value: "15000"
       - key: FORCE_RESET_SUPER_ADMIN_PASSWORD
         value: "true"
       - key: EXPOSE_RESET_LINK
         value: "false"
+      - key: META_MEDIA_LIMIT
+        value: "500"
+      - key: META_INSIGHTS_CONCURRENCY
+        value: "5"

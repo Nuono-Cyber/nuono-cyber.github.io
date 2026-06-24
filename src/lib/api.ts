@@ -40,6 +40,7 @@ export type LoginResponse = LoginSuccessResponse | LoginPasswordChangeResponse;
 const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
 const GITHUB_PAGES_DEFAULT_API = "https://nuono-cyber-github-io.onrender.com";
+const REQUEST_TIMEOUT_MS = 18000;
 
 function getDefaultApiBase() {
   if (typeof window === "undefined") return "";
@@ -53,6 +54,15 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || getDefaultApiBase()).repl
 function withBase(path: string) {
   if (!API_BASE) return path;
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function withQuery(path: string, params: Record<string, string | number | boolean | undefined>) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  });
+  const query = search.toString();
+  return query ? `${path}${path.includes("?") ? "&" : "?"}${query}` : path;
 }
 
 function getToken() {
@@ -74,12 +84,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let resp: Response;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    resp = await fetch(withBase(path), { ...init, headers });
-  } catch {
+    resp = await fetch(withBase(path), { ...init, headers, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Tempo limite ao carregar dados. O backend pode estar iniciando ou o Supabase demorou para responder.");
+    }
     throw new Error(
       "Backend indisponível. A API não está acessível neste ambiente. Inicie o backend ou publique a API."
     );
+  } finally {
+    window.clearTimeout(timeoutId);
   }
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
@@ -110,11 +127,15 @@ export const api = {
         body: JSON.stringify(payload),
       }),
   },
+  health: () => request<{ ok: boolean; api: string; db: string; stats?: Record<string, number>; timestamp: string }>("/api/health"),
   users: {
     listAdmin: () => request<{ rows: any[] }>("/api/admin/users"),
   },
   posts: {
-    list: () => request<{ rows: any[] }>("/api/posts"),
+    list: (options: { limit?: number } = {}) =>
+      request<{ rows: any[]; meta: { count: number; limited: boolean; limit: number } }>(
+        withQuery("/api/posts", { limit: options.limit || 1000 })
+      ),
     upsert: (posts: any[], mode: "replace" | "increment" = "increment") =>
       request<{ ok: boolean; processed: number; mode: "replace" | "increment" }>("/api/posts/upsert", {
         method: "POST",

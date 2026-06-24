@@ -8,6 +8,7 @@ const path = require("node:path");
 const {
   uuidv4,
   listRows,
+  listRowsWithCount,
   getSingleRow,
   insertRows,
   updateRows,
@@ -60,6 +61,13 @@ function isAllowedDevelopmentOrigin(origin) {
 
 app.set("trust proxy", 1);
 
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -73,7 +81,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "12mb" }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -281,15 +289,36 @@ app.post("/api/auth/password-reset/confirm", authLimiter, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/posts", authRequired, async (_req, res) => {
-  const rows = await listRows("instagram_posts", {
-    select: "*",
+app.get("/api/posts", authRequired, async (req, res) => {
+  const requestedLimit = Number(req.query.limit || 1000);
+  const limit = Math.max(1, Math.min(5000, Number.isFinite(requestedLimit) ? requestedLimit : 1000));
+  const { rows, count } = await listRowsWithCount("instagram_posts", {
+    select: [
+      "id",
+      "post_id",
+      "account_id",
+      "username",
+      "account_name",
+      "description",
+      "duration",
+      "published_at",
+      "permalink",
+      "post_type",
+      "views",
+      "reach",
+      "likes",
+      "shares",
+      "follows",
+      "comments",
+      "saves",
+    ].join(","),
     order: "published_at.desc",
+    limit,
   });
-  res.json({ rows });
+  res.json({ rows, meta: { count, limited: count > rows.length, limit } });
 });
 
-app.post("/api/posts/upsert", authRequired, async (req, res) => {
+app.post("/api/posts/upsert", authRequired, superAdminRequired, async (req, res) => {
   const posts = Array.isArray(req.body?.posts) ? req.body.posts : [];
   const mode = req.body?.mode === "replace" ? "replace" : "increment";
 
