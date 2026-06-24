@@ -5,6 +5,8 @@ import { api } from '@/lib/api';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
 
+const FALLBACK_CSV_PATH = '/data/instagram_posts-export-2026-05-02_09-17-47.csv';
+
 interface DbInstagramPost {
   id: string;
   post_id: string;
@@ -110,6 +112,19 @@ function instagramPostToDbFormat(post: InstagramPost) {
   };
 }
 
+async function loadFallbackPosts() {
+  const response = await fetch(FALLBACK_CSV_PATH, { cache: 'no-store' });
+  if (!response.ok) throw new Error('Arquivo local de dados indisponível');
+  const csvText = await response.text();
+  return parseCSVData(csvText);
+}
+
+function mergePosts(currentPosts: InstagramPost[], newPosts: InstagramPost[], mode: 'replace' | 'increment') {
+  if (mode === 'replace') return newPosts;
+  const postMap = new Map(currentPosts.map((post) => [post.id, post]));
+  newPosts.forEach((post) => postMap.set(post.id, post));
+  return Array.from(postMap.values()).sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+}
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
@@ -125,8 +140,9 @@ export function useInstagramData() {
     try {
       setIsLoading(true);
       const { rows: data, meta } = await api.posts.list({ limit: 1500 });
+      if (!Array.isArray(data)) throw new Error('Resposta de dados inválida');
 
-      if (data && data.length > 0) {
+      if (data.length > 0) {
         const instagramPosts = data.map(dbPostToInstagramPost);
         setPosts(instagramPosts);
       } else {
@@ -138,7 +154,17 @@ export function useInstagramData() {
       setError(null);
     } catch (err: any) {
       console.error('Error loading from database:', err);
-      setError(err?.message || 'Erro ao carregar dados do Instagram');
+      try {
+        const fallbackPosts = await loadFallbackPosts();
+        setPosts(fallbackPosts);
+        setTotalAvailable(fallbackPosts.length);
+        setIsLimited(false);
+        setLastLoadedAt(new Date());
+        setError(null);
+        toast.info('Backend indisponível. Dados carregados do arquivo local.');
+      } catch (fallbackError: any) {
+        setError(fallbackError?.message || err?.message || 'Erro ao carregar dados do Instagram');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -168,20 +194,30 @@ export function useInstagramData() {
 
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
-      const upsertResp = await api.posts.upsert(dbRecords, mode);
-      const processedCount = upsertResp.processed || dbRecords.length;
-      
-      logActivity(`upload_${type}`, { 
-        recordsCount: newPosts.length, 
-        processedCount,
-        mode,
-      });
+      try {
+        const upsertResp = await api.posts.upsert(dbRecords, mode);
+        const processedCount = upsertResp.processed || dbRecords.length;
 
-      toast.success(mode === 'replace' ? `${processedCount} registros carregados como nova amostra!` : `${processedCount} registros incrementados com sucesso!`);
-      console.log(`Successfully upserted ${processedCount} records`);
+        void logActivity(`upload_${type}`, {
+          recordsCount: newPosts.length,
+          processedCount,
+          mode,
+        });
 
-      // Reload from database to get fresh data
-      await loadFromDatabase();
+        toast.success(mode === 'replace' ? `${processedCount} registros carregados como nova amostra!` : `${processedCount} registros incrementados com sucesso!`);
+        console.log(`Successfully upserted ${processedCount} records`);
+
+        await loadFromDatabase();
+      } catch (upsertError) {
+        const mergedPosts = mergePosts(posts, newPosts, mode);
+        setPosts(mergedPosts);
+        setTotalAvailable(mergedPosts.length);
+        setIsLimited(false);
+        setLastLoadedAt(new Date());
+        setError(null);
+        toast.success(`${newPosts.length} registros carregados em modo local.`);
+        console.warn('Backend unavailable; uploaded data applied locally only.', upsertError);
+      }
 
     } catch (err: any) {
       console.error('Error saving to database:', err);

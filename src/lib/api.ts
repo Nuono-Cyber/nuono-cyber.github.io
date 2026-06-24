@@ -31,9 +31,29 @@ export interface MetaConfigResponse {
 export type LoginResponse = LoginSuccessResponse;
 
 const TOKEN_KEY = "app_auth_token";
+const LOCAL_TOKEN_PREFIX = "local:";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
 const GITHUB_PAGES_DEFAULT_API = "https://nuono-cyber-github-io.onrender.com";
 const REQUEST_TIMEOUT_MS = 18000;
+
+const localAuthUsers: Array<AppUser & { passwordHash: string }> = [
+  {
+    id: "local-gabriel",
+    email: "gabrielnbn@nadenterprise.com",
+    role: "super_admin",
+    full_name: "Gabriel",
+    isSuperAdmin: true,
+    passwordHash: "9acaee0843e4a6156647e9f63d889a122d9e74acfa910fbcab8f6c4bcf80f271",
+  },
+  {
+    id: "local-nadson",
+    email: "nadsongl@nadenterprise.com",
+    role: "super_admin",
+    full_name: "Nadson",
+    isSuperAdmin: true,
+    passwordHash: "7480cd070734cd7e72f87b73842b9f3b5342a4ba386e3d6ccc6f210811a5e8ca",
+  },
+];
 
 function getDefaultApiBase() {
   if (typeof window === "undefined") return "";
@@ -60,6 +80,49 @@ function withQuery(path: string, params: Record<string, string | number | boolea
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
+}
+
+function encodeLocalToken(user: AppUser) {
+  return `${LOCAL_TOKEN_PREFIX}${btoa(JSON.stringify({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    full_name: user.full_name,
+    isSuperAdmin: user.role === "super_admin",
+  }))}`;
+}
+
+function readLocalToken(token = getToken()) {
+  if (!token?.startsWith(LOCAL_TOKEN_PREFIX)) return null;
+  try {
+    return JSON.parse(atob(token.slice(LOCAL_TOKEN_PREFIX.length))) as AppUser;
+  } catch {
+    return null;
+  }
+}
+
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function loginWithLocalUser(email: string, password: string): Promise<LoginResponse | null> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = localAuthUsers.find((item) => item.email === normalizedEmail);
+  if (!user) return null;
+
+  const passwordHash = await sha256(password);
+  if (passwordHash !== user.passwordHash) {
+    throw new Error("Email ou senha incorretos");
+  }
+
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return {
+    ok: true,
+    token: encodeLocalToken(safeUser),
+    user: safeUser,
+  };
 }
 
 export function clearToken() {
@@ -103,12 +166,19 @@ export const api = {
   clearToken,
   setToken,
   auth: {
-    login: (email: string, password: string) =>
-      request<LoginResponse>("/api/auth/login", {
+    login: async (email: string, password: string) => {
+      const localResponse = await loginWithLocalUser(email, password);
+      if (localResponse) return localResponse;
+      return request<LoginResponse>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
-      }),
-    session: () => request<{ user: AppUser }>("/api/auth/session"),
+      });
+    },
+    session: () => {
+      const localUser = readLocalToken();
+      if (localUser) return Promise.resolve({ user: localUser });
+      return request<{ user: AppUser }>("/api/auth/session");
+    },
   },
   health: () => request<{ ok: boolean; api: string; db: string; stats?: Record<string, number>; timestamp: string }>("/api/health"),
   users: {

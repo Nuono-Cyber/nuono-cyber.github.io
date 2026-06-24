@@ -54,7 +54,7 @@ export function useAuth() {
         isSuperAdmin: user.role === 'super_admin',
         isLoading: false,
       });
-      await logActivity('login', { email });
+      void logActivity('login', { email });
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -69,7 +69,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    await logActivity('logout');
+    void logActivity('logout');
     api.clearToken();
     setAuthState({
       user: null,
