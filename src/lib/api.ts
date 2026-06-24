@@ -28,14 +28,7 @@ export interface MetaConfigResponse {
   apiVersion: string;
 }
 
-export interface LoginPasswordChangeResponse {
-  ok: true;
-  requiresPasswordChange: true;
-  resetToken: string;
-  resetPath: string;
-}
-
-export type LoginResponse = LoginSuccessResponse | LoginPasswordChangeResponse;
+export type LoginResponse = LoginSuccessResponse;
 
 const TOKEN_KEY = "app_auth_token";
 const GITHUB_PAGES_HOST = "nuono-cyber.github.io";
@@ -116,16 +109,6 @@ export const api = {
         body: JSON.stringify({ email, password }),
       }),
     session: () => request<{ user: AppUser }>("/api/auth/session"),
-    requestReset: (payload: { corporateEmail: string; personalEmail?: string }) =>
-      request<{ ok: boolean; resetLink?: string; deliveryEmail?: string | null }>("/api/auth/password-reset/request", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-    confirmReset: (payload: { token: string; password: string }) =>
-      request<{ ok: boolean }>("/api/auth/password-reset/confirm", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
   },
   health: () => request<{ ok: boolean; api: string; db: string; stats?: Record<string, number>; timestamp: string }>("/api/health"),
   users: {

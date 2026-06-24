@@ -15,8 +15,8 @@ Este projeto agora precisa de backend para login/cadastro:
    - `DEFAULT_ADMIN_PASSWORD` (ex.: `nad123*`)
    - `SUPER_ADMIN_EMAILS` (csv de emails)
    - `ALLOWED_ORIGINS` (ex.: `https://nuono-cyber.github.io,http://localhost:5173,http://127.0.0.1:5173`)
-   - `FORCE_RESET_SUPER_ADMIN_PASSWORD` (use `true` apenas para forçar reset de senha em um deploy)
-   - `EXPOSE_RESET_LINK` (`false` em produção)
+   - `FORCE_SUPER_ADMIN_PASSWORD` (use `true` apenas em um deploy pontual para gravar `DEFAULT_ADMIN_PASSWORD` nos super admins)
+   - `EXPOSE_RESET_LINK` (`false` em produção; o fluxo público de recuperação está desativado)
 
 Depois do deploy, copie a URL pública da API (ex.: `https://nuono-api.onrender.com`).
 
@@ -30,14 +30,24 @@ Com isso, o frontend em `https://nuono-cyber.github.io` deixa de chamar `/api` l
 
 Observação: o frontend também usa fallback automático para `https://nuono-api.onrender.com` quando estiver rodando no domínio `nuono-cyber.github.io` e `VITE_API_BASE_URL` não estiver definido.
 
-## 3. Corrigir login de super usuário (nad123*)
+## 3. Corrigir login de super usuário
 
-Se o login do super usuário falhar com `nad123*`:
+Se o login do super usuário falhar:
 
-1. No Render, defina `DEFAULT_ADMIN_PASSWORD=nad123*`.
-2. Defina temporariamente `FORCE_RESET_SUPER_ADMIN_PASSWORD=true`.
+1. No Render, defina `DEFAULT_ADMIN_PASSWORD` com a senha desejada.
+2. Defina temporariamente `FORCE_SUPER_ADMIN_PASSWORD=true`.
 3. Faça um novo deploy e teste o login.
-4. Depois que funcionar, volte `FORCE_RESET_SUPER_ADMIN_PASSWORD` para `false` e redeploy.
+4. Depois que funcionar, volte `FORCE_SUPER_ADMIN_PASSWORD` para `false` e redeploy.
+
+Também é possível atualizar direto no Supabase:
+
+```bash
+SUPABASE_URL=... \
+SUPABASE_SERVICE_ROLE_KEY=... \
+TARGET_ADMIN_EMAIL=gabrielnbn@nadenterprise.com \
+NEW_ADMIN_PASSWORD='senha-desejada' \
+node scripts/set-admin-password.cjs
+```
 
 ## 4. Verificação rápida
 

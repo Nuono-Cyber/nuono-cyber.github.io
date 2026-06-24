@@ -3,13 +3,6 @@ import { api, AppUser, UserRole } from '@/lib/api';
 export type { UserRole };
 import { logActivity } from '@/utils/activityLogger';
 
-type SignInResult = {
-  error: any;
-  requiresPasswordChange?: boolean;
-  resetPath?: string;
-  resetToken?: string;
-};
-
 interface AuthState {
   user: AppUser | null;
   session: { token: string } | null;
@@ -52,16 +45,6 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     try {
       const response = await api.auth.login(email, password);
-      if (response.requiresPasswordChange) {
-        api.clearToken();
-        return {
-          error: null,
-          requiresPasswordChange: true,
-          resetPath: response.resetPath,
-          resetToken: response.resetToken,
-        } as SignInResult;
-      }
-
       const { token, user } = response;
       api.setToken(token);
       setAuthState({
@@ -72,9 +55,9 @@ export function useAuth() {
         isLoading: false,
       });
       await logActivity('login', { email });
-      return { error: null } as SignInResult;
+      return { error: null };
     } catch (error: any) {
-      return { error } as SignInResult;
+      return { error };
     }
   };
 
@@ -98,25 +81,10 @@ export function useAuth() {
     return { error: null };
   };
 
-  const resetPassword = async (email: string) => {
-    try {
-      await api.auth.requestReset({ corporateEmail: email });
-      return { error: null };
-    } catch (error: any) {
-      return { error };
-    }
-  };
-
-  const updatePassword = async (password: string) => {
-    return { error: { message: 'Use o fluxo com token de recuperação.' } };
-  };
-
   return {
     ...authState,
     signIn,
     signUp,
     signOut,
-    resetPassword,
-    updatePassword,
   };
 }

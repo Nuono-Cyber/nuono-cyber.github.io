@@ -14,8 +14,9 @@ const configuredAdminPassword = (process.env.DEFAULT_ADMIN_PASSWORD || "").trim(
 const temporarySuperAdminPassword = "Senha123##";
 const forcePasswordReset =
   String(process.env.FORCE_RESET_SUPER_ADMIN_PASSWORD || "").toLowerCase() === "true";
+const forceAdminPassword =
+  String(process.env.FORCE_SUPER_ADMIN_PASSWORD || "").toLowerCase() === "true" || forcePasswordReset;
 const initialAdminPassword = configuredAdminPassword || (isProduction ? "" : temporarySuperAdminPassword);
-const shouldRequirePasswordChangeOnFirstAccess = initialAdminPassword === temporarySuperAdminPassword;
 
 if (!initialAdminPassword) {
   throw new Error("DEFAULT_ADMIN_PASSWORD is required in production.");
@@ -199,7 +200,7 @@ async function ensureSuperAdmins() {
         personal_email: defaultSuperAdminPersonalEmails[email] || null,
         role: "super_admin",
         created_at: new Date().toISOString(),
-        must_change_password: shouldRequirePasswordChangeOnFirstAccess || forcePasswordReset,
+        must_change_password: false,
       });
       continue;
     }
@@ -209,9 +210,9 @@ async function ensureSuperAdmins() {
       personal_email: defaultSuperAdminPersonalEmails[email] || existing.personal_email || null,
     };
 
-    if (forcePasswordReset) {
+    if (forceAdminPassword) {
       updatePayload.password_hash = bcrypt.hashSync(initialAdminPassword, 10);
-      updatePayload.must_change_password = true;
+      updatePayload.must_change_password = false;
     }
 
     await updateRows("users", updatePayload, {

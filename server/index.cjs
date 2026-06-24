@@ -46,8 +46,6 @@ const defaultOrigins = [
   "https://nuono-cyber.github.io",
 ];
 const allowedOrigins = new Set(configuredOrigins.length > 0 ? configuredOrigins : defaultOrigins);
-const exposeResetLink =
-  !isProduction || String(process.env.EXPOSE_RESET_LINK || "").toLowerCase() === "true";
 
 function isAllowedDevelopmentOrigin(origin) {
   if (isProduction || !origin) return false;
@@ -90,27 +88,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Muitas tentativas. Tente novamente em alguns minutos." },
 });
-
-function issuePasswordResetToken(userId) {
-  const token = uuidv4();
-  const now = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
-  return Promise.all([
-    updateRows("password_reset_tokens", { used_at: now }, {
-      user_id: `eq.${userId}`,
-      used_at: "is.null",
-    }, { returning: "minimal" }),
-    insertRows("password_reset_tokens", {
-      id: uuidv4(),
-      user_id: userId,
-      token,
-      created_at: now,
-      expires_at: expiresAt,
-      used_at: null,
-    }),
-  ]).then(() => ({ token, resetPath: `/auth/reset-password?token=${token}&reason=first-access` }));
-}
 
 function createToken(user) {
   return jwt.sign(
@@ -188,12 +165,8 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
     }
 
     if (user.must_change_password) {
-      const reset = await issuePasswordResetToken(user.id);
-      return res.json({
-        ok: true,
-        requiresPasswordChange: true,
-        resetToken: reset.token,
-        resetPath: reset.resetPath,
+      return res.status(403).json({
+        error: "Senha pendente de configuração. Peça ao administrador para atualizar a senha no ambiente do backend.",
       });
     }
 
@@ -218,75 +191,11 @@ app.get("/api/auth/session", authRequired, async (req, res) => {
 });
 
 app.post("/api/auth/password-reset/request", authLimiter, async (req, res) => {
-  const corporateEmail = String(req.body?.corporateEmail || "").toLowerCase().trim();
-  const personalEmail = String(req.body?.personalEmail || "").toLowerCase().trim();
-  const user = await getSingleRow("users", {
-    select: "*",
-    email: `eq.${corporateEmail}`,
-  });
-
-  if (!user) {
-    return res.status(400).json({ error: "Usuário não encontrado" });
-  }
-
-  if (user.personal_email) {
-    if (!personalEmail) {
-      return res.status(400).json({ error: "Informe o email pessoal cadastrado para continuar." });
-    }
-    if (personalEmail !== String(user.personal_email).toLowerCase()) {
-      return res.status(400).json({ error: "O email pessoal informado não confere." });
-    }
-  }
-
-  const token = uuidv4();
-  const now = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
-  await insertRows("password_reset_tokens", {
-    id: uuidv4(),
-    user_id: user.id,
-    token,
-    created_at: now,
-    expires_at: expiresAt,
-    used_at: null,
-  });
-
-  const response = { ok: true, deliveryEmail: user.personal_email || null };
-  if (exposeResetLink || Boolean(user.personal_email && personalEmail)) {
-    response.resetLink = `/auth/reset-password?token=${token}`;
-  }
-  res.json(response);
+  res.status(410).json({ error: "Recuperação de senha desativada neste ambiente." });
 });
 
 app.post("/api/auth/password-reset/confirm", authLimiter, async (req, res) => {
-  const token = String(req.body?.token || "");
-  const password = String(req.body?.password || "");
-  if (password.length < 6) return res.status(400).json({ error: "Senha muito curta" });
-
-  const row = await getSingleRow("password_reset_tokens", {
-    select: "*",
-    token: `eq.${token}`,
-    used_at: "is.null",
-  });
-
-  if (!row || new Date(row.expires_at).getTime() <= Date.now()) {
-    return res.status(400).json({ error: "Token inválido ou expirado" });
-  }
-
-  await updateRows("users", {
-    password_hash: bcrypt.hashSync(password, 10),
-    must_change_password: false,
-  }, {
-    id: `eq.${row.user_id}`,
-  }, { returning: "minimal" });
-
-  await updateRows("password_reset_tokens", {
-    used_at: new Date().toISOString(),
-  }, {
-    id: `eq.${row.id}`,
-  }, { returning: "minimal" });
-
-  res.json({ ok: true });
+  res.status(410).json({ error: "Recuperação de senha desativada neste ambiente." });
 });
 
 app.get("/api/posts", authRequired, async (req, res) => {

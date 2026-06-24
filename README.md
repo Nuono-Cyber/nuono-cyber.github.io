@@ -87,7 +87,7 @@ Os arquivos devem conter as seguintes colunas:
 1. Publique a migration SQL em `supabase/migrations`
 2. Configure `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no backend
 3. Faça login com um dos super admins
-4. No primeiro acesso, use a senha temporária `Senha123##` e redefina a senha
+4. Defina a senha do super admin por variável de ambiente no backend ou pelo script `scripts/set-admin-password.cjs`
 5. Acesse a aba **"Importar Dados"** para subir arquivos ou configurar o sync da Meta
 
 ## 🛠 Stack Tecnológico
@@ -105,10 +105,10 @@ Os arquivos devem conter as seguintes colunas:
 ## ⚙️ Funcionalidades Principais
 
 - 📊 **Dashboard Interativo** - Visualizações em tempo real
-- 🔐 **Autenticação Segura** - Super admins com troca obrigatória de senha no primeiro acesso
+- 🔐 **Autenticação Segura** - Super admins gerenciados pelo backend
 - 💬 **Chat Interno** - Comunicação entre admins
 - 📈 **Análises Avançadas** - 9 abas de análise diferenciadas
-- 🎨 **Tema Personalizável** - Dark/Light mode
+- 🎨 **Tema Personalizável** - Vermelho, azul e empresarial
 - ☁️ **Sincronização Cloud** - Dados sempre sincronizados
 - 🤖 **Integração IA** - Chat bot com análises inteligentes
 

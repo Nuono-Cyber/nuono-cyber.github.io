@@ -6,17 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Instagram, Loader2, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { api } from '@/lib/api';
-import { z } from 'zod';
-
-const emailSchema = z.string().email('Email inválido').refine(
-  (email) => email.toLowerCase().endsWith('@nadenterprise.com'),
-  'Apenas emails @nadenterprise.com são permitidos'
-);
-const personalEmailSchema = z.string().email('Email pessoal inválido');
-const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracteres');
+import { Instagram, Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -27,11 +17,6 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showResetDialog, setShowResetDialog] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetPersonalEmail, setResetPersonalEmail] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -43,53 +28,12 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     setIsLoading(true);
     try {
-      const { error: signInError, requiresPasswordChange, resetPath } = await signIn(email, password);
-      if (requiresPasswordChange && resetPath) {
-        navigate(resetPath, {
-          replace: true,
-          state: {
-            email,
-            firstAccess: true,
-          },
-        });
-        return;
-      }
+      const { error: signInError } = await signIn(email, password);
       if (signInError) setError(signInError.message || 'Erro ao fazer login');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsResetting(true);
-    try {
-      if (!emailSchema.safeParse(resetEmail).success) throw new Error('Email corporativo inválido');
-      if (resetPersonalEmail && !personalEmailSchema.safeParse(resetPersonalEmail).success) {
-        throw new Error('Email pessoal inválido');
-      }
-      const data = await api.auth.requestReset({
-        corporateEmail: resetEmail,
-        personalEmail: resetPersonalEmail || undefined,
-      });
-      setShowResetDialog(false);
-      setResetEmail('');
-      setResetPersonalEmail('');
-      if (data.resetLink) {
-        setSuccess(`Link de recuperação: ${window.location.origin}${data.resetLink}`);
-      } else if (data.deliveryEmail) {
-        setSuccess(`Solicitação registrada para o email pessoal ${data.deliveryEmail}.`);
-      } else {
-        setSuccess('Solicitação de recuperação enviada.');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao recuperar senha');
-    } finally {
-      setIsResetting(false);
     }
   };
 
@@ -107,11 +51,10 @@ export default function Auth() {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Acesso ao Painel</CardTitle>
-            <CardDescription>Use um dos logins administrativos configurados no sistema.</CardDescription>
+            <CardDescription>Use o login administrativo configurado para este painel.</CardDescription>
           </CardHeader>
           <CardContent>
             {error && <Alert variant="destructive" className="mb-4"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
-            {success && <Alert className="mb-4 border-green-500 text-green-700 bg-green-50"><CheckCircle className="h-4 w-4" /><AlertDescription>{success}</AlertDescription></Alert>}
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -131,52 +74,10 @@ export default function Auth() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Entrando...</> : 'Entrar'}
               </Button>
-              <Button
-                type="button"
-                variant="link"
-                className="w-full"
-                onClick={() => {
-                  setResetEmail(email);
-                  setShowResetDialog(true);
-                }}
-              >
-                Esqueci minha senha
-              </Button>
             </form>
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Recuperar Senha</DialogTitle>
-            <DialogDescription>Informe seu email corporativo para gerar um novo link de redefinição.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="reset-email">Email Corporativo</Label>
-              <Input id="reset-email" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="reset-personal-email">Email Pessoal</Label>
-              <Input
-                id="reset-personal-email"
-                type="email"
-                value={resetPersonalEmail}
-                onChange={(e) => setResetPersonalEmail(e.target.value)}
-                placeholder="Necessário para contas com email pessoal cadastrado"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowResetDialog(false)}>Cancelar</Button>
-              <Button type="submit" className="flex-1" disabled={isResetting}>
-                {isResetting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : 'Gerar Link'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

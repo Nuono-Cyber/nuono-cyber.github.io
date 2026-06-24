@@ -196,8 +196,8 @@ export default function Admin() {
               <div className="text-muted-foreground">`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `DEFAULT_ADMIN_PASSWORD`, `SUPER_ADMIN_EMAILS`</div>
             </div>
             <div className="rounded-lg border p-3">
-              <div className="font-medium">Primeiro acesso</div>
-              <div className="text-muted-foreground">Entrar com `Senha123##`, redefinir a senha e confirmar que `must_change_password` virou `false`.</div>
+              <div className="font-medium">Senha admin</div>
+              <div className="text-muted-foreground">Definir `DEFAULT_ADMIN_PASSWORD` no Render ou atualizar direto pelo script `scripts/set-admin-password.cjs`.</div>
             </div>
           </CardContent>
         </Card>
