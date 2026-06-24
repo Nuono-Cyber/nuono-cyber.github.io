@@ -357,6 +357,59 @@
     animation: slide-in 0.4s ease-out forwards;
   }
 
+  .dna-fallback {
+    position: absolute;
+    inset: 10% 3% 7% 48%;
+    display: grid;
+    place-items: center;
+    opacity: 0.72;
+    filter: drop-shadow(0 0 28px hsl(var(--primary) / 0.18));
+    transform: rotate(-8deg);
+  }
+
+  .dna-fallback span {
+    --phase: calc(var(--dna-index) * 18deg);
+    position: absolute;
+    top: calc(var(--dna-index) * 4.2%);
+    left: 50%;
+    width: clamp(86px, 12vw, 172px);
+    height: 2px;
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.75), hsl(var(--foreground) / 0.36), hsl(var(--accent) / 0.75));
+    transform: translateX(-50%) rotateY(var(--phase));
+    transform-style: preserve-3d;
+  }
+
+  .dna-fallback span::before,
+  .dna-fallback span::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    box-shadow: 0 0 16px currentColor;
+  }
+
+  .dna-fallback span::before {
+    left: -5px;
+    color: hsl(var(--primary));
+    background: hsl(var(--primary));
+  }
+
+  .dna-fallback span::after {
+    right: -5px;
+    color: hsl(var(--accent));
+    background: hsl(var(--accent));
+  }
+
+  @media (max-width: 900px) {
+    .dna-fallback {
+      inset: 8% -10% 42% 34%;
+      opacity: 0.42;
+    }
+  }
+
   .stagger-1 { animation-delay: 0.05s; }
   .stagger-2 { animation-delay: 0.1s; }
   .stagger-3 { animation-delay: 0.15s; }

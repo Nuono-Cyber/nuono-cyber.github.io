@@ -14,6 +14,7 @@ Este projeto agora precisa de backend para login/cadastro:
    - `JWT_SECRET` (obrigatória)
    - `DEFAULT_ADMIN_PASSWORD` (ex.: `nad123*`)
    - `SUPER_ADMIN_EMAILS` (csv de emails)
+   - `SUPER_ADMIN_PASSWORD_OVERRIDES_JSON` (opcional, JSON para senhas diferentes por super admin)
    - `ALLOWED_ORIGINS` (ex.: `https://nuono-cyber.github.io,http://localhost:5173,http://127.0.0.1:5173`)
    - `FORCE_SUPER_ADMIN_PASSWORD` (use `true` apenas em um deploy pontual para gravar `DEFAULT_ADMIN_PASSWORD` nos super admins)
    - `EXPOSE_RESET_LINK` (`false` em produção; o fluxo público de recuperação está desativado)
@@ -38,6 +39,15 @@ Se o login do super usuário falhar:
 2. Defina temporariamente `FORCE_SUPER_ADMIN_PASSWORD=true`.
 3. Faça um novo deploy e teste o login.
 4. Depois que funcionar, volte `FORCE_SUPER_ADMIN_PASSWORD` para `false` e redeploy.
+
+Para senhas diferentes por usuário, use `SUPER_ADMIN_PASSWORD_OVERRIDES_JSON` no Render:
+
+```json
+{
+  "gabrielnbn@nadenterprise.com": "senha-do-gabriel",
+  "nadsongl@nadenterprise.com": "senha-do-nadson"
+}
+```
 
 Também é possível atualizar direto no Supabase:
 

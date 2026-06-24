@@ -22,6 +22,8 @@ services:
         sync: false
       - key: SUPER_ADMIN_EMAILS
         sync: false
+      - key: SUPER_ADMIN_PASSWORD_OVERRIDES_JSON
+        sync: false
       - key: ALLOWED_ORIGINS
         value: "https://nuono-cyber.github.io"
       - key: SUPABASE_TIMEOUT_MS

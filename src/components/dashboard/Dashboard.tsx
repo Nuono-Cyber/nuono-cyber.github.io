@@ -15,7 +15,7 @@ import { BenchmarkTab } from './tabs/BenchmarkTab';
 import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
-import { ScrollMetricsScene } from './ScrollMetricsScene';
+import { DnaHelixScene } from '@/components/visuals/DnaHelixScene';
 import { InternalChat } from '@/components/chat/InternalChat';
 import { Loader2, Instagram, Calendar, BarChart3, LogOut, RefreshCw, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -128,7 +128,10 @@ export function Dashboard() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background relative">
         <WeatherBackground effect={weatherEffect} onEffectChange={setWeatherEffect} />
-        <ScrollMetricsScene />
+        <DnaHelixScene
+          scrollLinked
+          className="pointer-events-none fixed inset-y-20 right-0 z-0 hidden w-[34vw] min-w-[360px] max-w-[620px] opacity-55 lg:block"
+        />
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="flex-1 flex flex-col min-w-0 relative z-10">

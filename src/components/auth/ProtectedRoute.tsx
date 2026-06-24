@@ -24,7 +24,7 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/welcome" state={{ from: location }} replace />;
   }
 
   if (requireSuperAdmin && !isSuperAdmin) {

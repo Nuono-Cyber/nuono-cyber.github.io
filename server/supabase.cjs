@@ -38,6 +38,23 @@ const configuredSuperAdmins = (process.env.SUPER_ADMIN_EMAILS || "")
 const superAdminEmails =
   configuredSuperAdmins.length > 0 ? configuredSuperAdmins : defaultSuperAdminEmails;
 
+function parsePasswordOverrides() {
+  const raw = String(process.env.SUPER_ADMIN_PASSWORD_OVERRIDES_JSON || "").trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([email, password]) => [String(email).toLowerCase().trim(), String(password || "")])
+        .filter(([email, password]) => email && password.length >= 6)
+    );
+  } catch {
+    console.error("[startup] SUPER_ADMIN_PASSWORD_OVERRIDES_JSON is invalid JSON.");
+    return {};
+  }
+}
+
 function buildUrl(pathname, query = {}) {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${pathname.replace(/^\/+/, "")}`);
   Object.entries(query).forEach(([key, value]) => {
@@ -185,7 +202,11 @@ async function countRows(table, query = {}) {
 }
 
 async function ensureSuperAdmins() {
+  const passwordOverrides = parsePasswordOverrides();
+
   for (const email of superAdminEmails) {
+    const passwordOverride = passwordOverrides[email];
+    const effectiveInitialPassword = passwordOverride || initialAdminPassword;
     const existing = await getSingleRow("users", {
       select: "id,email,password_hash,must_change_password,role",
       email: `eq.${email}`,
@@ -195,7 +216,7 @@ async function ensureSuperAdmins() {
       await insertRows("users", {
         id: uuidv4(),
         email,
-        password_hash: bcrypt.hashSync(initialAdminPassword, 10),
+        password_hash: bcrypt.hashSync(effectiveInitialPassword, 10),
         full_name: email.split("@")[0],
         personal_email: defaultSuperAdminPersonalEmails[email] || null,
         role: "super_admin",
@@ -210,8 +231,8 @@ async function ensureSuperAdmins() {
       personal_email: defaultSuperAdminPersonalEmails[email] || existing.personal_email || null,
     };
 
-    if (forceAdminPassword) {
-      updatePayload.password_hash = bcrypt.hashSync(initialAdminPassword, 10);
+    if (forceAdminPassword || passwordOverride) {
+      updatePayload.password_hash = bcrypt.hashSync(effectiveInitialPassword, 10);
       updatePayload.must_change_password = false;
     }
 
