@@ -55,6 +55,16 @@ export function Dashboard() {
   const [internalChatOpen, setInternalChatOpen] = useState(false);
   const [weatherEffect, setWeatherEffect] = useState<'snow' | 'rain' | 'none'>('snow');
 
+  const handleChatBotOpenChange = useCallback((open: boolean) => {
+    setChatBotOpen(open);
+    if (open) setInternalChatOpen(false);
+  }, []);
+
+  const handleInternalChatOpenChange = useCallback((open: boolean) => {
+    setInternalChatOpen(open);
+    if (open) setChatBotOpen(false);
+  }, []);
+
   const handleLogout = async () => {
     await signOut();
     navigate('/auth', { replace: true });
@@ -201,8 +211,8 @@ export function Dashboard() {
       </div>
 
       {/* Floating Elements */}
-      <InternalChat isOpen={internalChatOpen} onOpenChange={setInternalChatOpen} otherIsOpen={chatBotOpen} />
-      <ChatBot isOpen={chatBotOpen} onOpenChange={setChatBotOpen} otherIsOpen={internalChatOpen} />
+      <InternalChat isOpen={internalChatOpen} onOpenChange={handleInternalChatOpenChange} />
+      <ChatBot isOpen={chatBotOpen} onOpenChange={handleChatBotOpenChange} posts={posts} />
     </SidebarProvider>
   );
 }

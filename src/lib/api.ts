@@ -101,6 +101,10 @@ function readLocalToken(token = getToken()) {
   }
 }
 
+function getLocalUsers() {
+  return localAuthUsers.map(({ passwordHash: _passwordHash, ...user }) => user);
+}
+
 async function sha256(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -168,6 +172,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   getToken,
   isLocalToken,
+  getLocalUsers,
   clearToken,
   setToken,
   auth: {

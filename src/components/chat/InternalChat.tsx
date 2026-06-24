@@ -17,17 +17,16 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useInternalChat, ChatUser } from '@/hooks/useInternalChat';
-import { useAuth } from '@/hooks/useAuth';
+import { useInternalChat } from '@/hooks/useInternalChat';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface InternalChatProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  otherIsOpen: boolean;
 }
 
-export function InternalChat({ isOpen, onOpenChange, otherIsOpen }: InternalChatProps) {
-  const { user } = useAuth();
+export function InternalChat({ isOpen, onOpenChange }: InternalChatProps) {
+  const { user } = useAuthContext();
   const {
     messages,
     users,
@@ -76,18 +75,16 @@ export function InternalChat({ isOpen, onOpenChange, otherIsOpen }: InternalChat
 
   if (!user) return null;
 
-  // Button: always at right-6
-  // Window: opens above button at right-6. If otherIsOpen, stays at right-6 (it's the rightmost)
-  const windowRight = 'right-6';
-
   return (
     <>
       {/* Floating Button */}
       <Button
+        aria-label="Abrir chat interno"
         onClick={() => onOpenChange(true)}
         className={cn(
-          'fixed z-50 bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 hover:scale-110 transition-all duration-300',
-          isOpen && 'hidden'
+          'fixed z-50 bottom-5 right-5 sm:bottom-6 sm:right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-[opacity,transform,box-shadow] duration-300 ease-out',
+          'hover:scale-105 focus-visible:scale-105',
+          isOpen ? 'pointer-events-none scale-90 opacity-0' : 'opacity-100'
         )}
       >
         <MessageSquare className="h-6 w-6 text-primary-foreground" />
@@ -96,13 +93,7 @@ export function InternalChat({ isOpen, onOpenChange, otherIsOpen }: InternalChat
       {/* Chat Window */}
       {isOpen && (
         <Card 
-          className={cn(
-            "fixed z-50 bottom-6 w-[420px] max-w-[95vw] h-[600px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-border/50 bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-in-out",
-            windowRight
-          )}
-          style={{
-            animation: 'slide-up 0.3s ease-out',
-          }}
+          className="fixed inset-x-4 bottom-4 z-50 flex h-[calc(100svh-2rem)] flex-col overflow-hidden border-border/60 bg-background/96 shadow-2xl backdrop-blur-xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[620px] sm:max-h-[calc(100vh-3rem)] sm:w-[420px]"
         >
           {/* Header */}
           <div className="p-4 border-b border-border/50 bg-primary">
@@ -125,6 +116,7 @@ export function InternalChat({ isOpen, onOpenChange, otherIsOpen }: InternalChat
                 </div>
               </div>
               <Button
+                aria-label="Fechar chat interno"
                 variant="ghost"
                 size="icon"
                 onClick={() => onOpenChange(false)}
