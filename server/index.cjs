@@ -419,14 +419,12 @@ if (fs.existsSync(staticDir)) {
   });
 }
 
+app.listen(PORT, () => {
+  console.log(`Fullstack app running on http://localhost:${PORT}`);
+});
+
 ensureSuperAdmins()
   .then(() => startMetaSyncScheduler())
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Fullstack app running on http://localhost:${PORT}`);
-    });
-  })
   .catch((error) => {
-    console.error("[startup]", error instanceof Error ? error.message : error);
-    process.exit(1);
+    console.error("[bootstrap]", error instanceof Error ? error.message : error);
   });
