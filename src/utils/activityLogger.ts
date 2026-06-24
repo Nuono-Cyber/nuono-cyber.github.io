@@ -8,6 +8,7 @@ export interface ActivityLog {
 export async function logActivity(action: string, details?: Record<string, any>) {
   try {
     if (!api.getToken()) return;
+    if (api.isLocalToken()) return;
     await api.activity.create(action, details);
   } catch (err) {
     console.error('Error logging activity:', err);

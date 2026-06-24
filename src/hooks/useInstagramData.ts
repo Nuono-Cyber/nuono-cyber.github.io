@@ -139,6 +139,16 @@ export function useInstagramData() {
   const loadFromDatabase = async () => {
     try {
       setIsLoading(true);
+      if (api.isLocalToken()) {
+        const fallbackPosts = await loadFallbackPosts();
+        setPosts(fallbackPosts);
+        setTotalAvailable(fallbackPosts.length);
+        setIsLimited(false);
+        setLastLoadedAt(new Date());
+        setError(null);
+        return;
+      }
+
       const { rows: data, meta } = await api.posts.list({ limit: 1500 });
       if (!Array.isArray(data)) throw new Error('Resposta de dados inválida');
 
@@ -195,6 +205,10 @@ export function useInstagramData() {
       console.log(`Processing ${dbRecords.length} records for upsert...`);
 
       try {
+        if (api.isLocalToken()) {
+          throw new Error('Sessão local sem persistência remota');
+        }
+
         const upsertResp = await api.posts.upsert(dbRecords, mode);
         const processedCount = upsertResp.processed || dbRecords.length;
 

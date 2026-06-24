@@ -133,6 +133,10 @@ export function setToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token);
 }
 
+export function isLocalToken(token = getToken()) {
+  return Boolean(token?.startsWith(LOCAL_TOKEN_PREFIX));
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(init.headers || {});
@@ -163,6 +167,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   getToken,
+  isLocalToken,
   clearToken,
   setToken,
   auth: {

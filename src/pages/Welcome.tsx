@@ -5,6 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { DnaHelixScene } from '@/components/visuals/DnaHelixScene';
 
+const featureItems = [
+  { icon: BarChart3, label: 'Performance', text: 'Visões por alcance, engajamento, formato e período.' },
+  { icon: Database, label: 'Dados', text: 'Importação por CSV/Excel com caminho pronto para Meta Graph API.' },
+  { icon: ShieldCheck, label: 'Controle', text: 'Acesso protegido e operação administrativa centralizada.' },
+];
+
 export default function Welcome() {
   const { user, isLoading } = useAuthContext();
 
@@ -13,13 +19,9 @@ export default function Welcome() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <main className="relative min-h-screen">
-        <DnaHelixScene
-          intensity="hero"
-          className="pointer-events-none absolute inset-0 z-[1] opacity-95"
-        />
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_72%_35%,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.94)_38%,hsl(var(--background)/0.24)_100%)]" />
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_82%_28%,hsl(var(--primary)/0.16),transparent_30%),radial-gradient(circle_at_62%_74%,hsl(var(--accent)/0.1),transparent_28%)]" />
 
         <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
@@ -34,13 +36,13 @@ export default function Welcome() {
             </div>
           </header>
 
-          <div className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[minmax(0,0.92fr)_minmax(320px,0.58fr)] lg:py-16">
-            <div className="max-w-3xl">
+          <div className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(420px,0.68fr)] lg:gap-12 lg:py-12">
+            <div className="relative z-10 max-w-3xl">
               <Badge variant="outline" className="mb-5 gap-2 border-primary/30 bg-background/50 px-3 py-1 text-xs backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Métricas, conteúdo e crescimento em uma visão executiva
               </Badge>
-              <h1 className="text-balance text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
+              <h1 className="max-w-[12ch] text-4xl font-bold leading-[1.05] sm:max-w-[13ch] sm:text-5xl lg:max-w-[13ch] lg:text-6xl xl:text-7xl">
                 Análise estratégica para influenciadores que tratam conteúdo como negócio.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
@@ -56,18 +58,24 @@ export default function Welcome() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {[
-                { icon: BarChart3, label: 'Performance', text: 'Visões por alcance, engajamento, formato e período.' },
-                { icon: Database, label: 'Dados', text: 'Importação por CSV/Excel com caminho pronto para Meta Graph API.' },
-                { icon: ShieldCheck, label: 'Controle', text: 'Acesso protegido e operação administrativa centralizada.' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-lg border border-border/70 bg-card/78 p-4 shadow-sm backdrop-blur">
-                  <item.icon className="mb-3 h-5 w-5 text-primary" />
-                  <div className="text-sm font-semibold">{item.label}</div>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.text}</p>
-                </div>
-              ))}
+            <div className="relative z-0 space-y-5">
+              <div className="relative h-[260px] overflow-hidden rounded-lg border border-border/60 bg-card/40 sm:h-[320px] lg:h-[540px]">
+                <DnaHelixScene
+                  intensity="hero"
+                  className="pointer-events-none absolute inset-0 opacity-95"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.08),hsl(var(--background)/0.5))]" />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {featureItems.map((item) => (
+                  <div key={item.label} className="rounded-lg border border-border/70 bg-card/86 p-4 shadow-sm backdrop-blur">
+                    <item.icon className="mb-3 h-5 w-5 text-primary" />
+                    <div className="text-sm font-semibold">{item.label}</div>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
