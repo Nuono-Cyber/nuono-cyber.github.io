@@ -52,7 +52,7 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
 
       const primary = new THREE.Color(readThemeColor('--primary', 'hsl(0 78% 54%)'));
       const accent = new THREE.Color(readThemeColor('--accent', 'hsl(216 74% 55%)'));
-      const foreground = new THREE.Color(readThemeColor('--foreground', 'hsl(210 20% 95%)'));
+      const bridgeColor = primary.clone().lerp(accent, 0.46).multiplyScalar(0.78);
 
       scene.add(new THREE.AmbientLight(0xffffff, intensity === 'hero' ? 0.9 : 0.7));
       const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
@@ -75,11 +75,11 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
         roughness: 0.28,
       });
       const rungMaterial = new THREE.MeshStandardMaterial({
-        color: foreground,
+        color: bridgeColor,
         transparent: true,
-        opacity: 0.48,
+        opacity: 0.3,
         metalness: 0.18,
-        roughness: 0.38,
+        roughness: 0.46,
       });
       const particleMaterial = new THREE.PointsMaterial({
         color: accent,
@@ -139,12 +139,12 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
       const applyThemeColors = () => {
         primary.set(readThemeColor('--primary', 'hsl(0 78% 54%)'));
         accent.set(readThemeColor('--accent', 'hsl(216 74% 55%)'));
-        foreground.set(readThemeColor('--foreground', 'hsl(210 20% 95%)'));
+        bridgeColor.copy(primary).lerp(accent, 0.46).multiplyScalar(0.78);
         strandMaterial.color.copy(primary);
         strandMaterial.emissive.copy(primary).multiplyScalar(0.2);
         pairedStrandMaterial.color.copy(accent);
         pairedStrandMaterial.emissive.copy(accent).multiplyScalar(0.18);
-        rungMaterial.color.copy(foreground);
+        rungMaterial.color.copy(bridgeColor);
         particleMaterial.color.copy(accent);
         rimLight.color.copy(primary);
       };
