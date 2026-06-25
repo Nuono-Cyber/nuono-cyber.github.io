@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { InstagramPost } from '@/types/instagram';
 import { parseCSVData } from '@/utils/dataProcessor';
 import { api } from '@/lib/api';
@@ -129,20 +129,31 @@ function mergePosts(currentPosts: InstagramPost[], newPosts: InstagramPost[], mo
 
 export function useInstagramData() {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
+  const [basePosts, setBasePosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [totalAvailable, setTotalAvailable] = useState(0);
   const [isLimited, setIsLimited] = useState(false);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
+  const [sessionSample, setSessionSample] = useState<{ active: boolean; name?: string; originalCount: number }>({
+    active: false,
+    originalCount: 0,
+  });
+
+  const applyBasePosts = useCallback((nextPosts: InstagramPost[]) => {
+    setPosts(nextPosts);
+    setBasePosts(nextPosts);
+    setSessionSample({ active: false, originalCount: nextPosts.length });
+  }, []);
 
   // Load data from database
-  const loadFromDatabase = async () => {
+  const loadFromDatabase = useCallback(async () => {
     try {
       setIsLoading(true);
       if (api.isLocalToken()) {
         const fallbackPosts = await loadFallbackPosts();
-        setPosts(fallbackPosts);
+        applyBasePosts(fallbackPosts);
         setTotalAvailable(fallbackPosts.length);
         setIsLimited(false);
         setLastLoadedAt(new Date());
@@ -155,9 +166,9 @@ export function useInstagramData() {
 
       if (data.length > 0) {
         const instagramPosts = data.map(dbPostToInstagramPost);
-        setPosts(instagramPosts);
+        applyBasePosts(instagramPosts);
       } else {
-        setPosts([]);
+        applyBasePosts([]);
       }
       setTotalAvailable(meta?.count || data?.length || 0);
       setIsLimited(Boolean(meta?.limited));
@@ -167,7 +178,7 @@ export function useInstagramData() {
       console.error('Error loading from database:', err);
       try {
         const fallbackPosts = await loadFallbackPosts();
-        setPosts(fallbackPosts);
+        applyBasePosts(fallbackPosts);
         setTotalAvailable(fallbackPosts.length);
         setIsLimited(false);
         setLastLoadedAt(new Date());
@@ -179,13 +190,13 @@ export function useInstagramData() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applyBasePosts]);
 
   useEffect(() => {
     loadFromDatabase();
-  }, []);
+  }, [loadFromDatabase]);
 
-  const addUploadedData = async (type: 'csv' | 'excel', data: any[], mode: UploadMode = 'increment') => {
+  const addUploadedData = async (type: 'csv' | 'excel', data: any[], mode: UploadMode = 'increment', sourceName?: string) => {
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 
@@ -206,6 +217,11 @@ export function useInstagramData() {
         setIsLimited(false);
         setLastLoadedAt(new Date());
         setError(null);
+        setSessionSample({
+          active: true,
+          name: sourceName || (type === 'excel' ? 'Amostra Excel' : 'Amostra CSV'),
+          originalCount: basePosts.length || posts.length,
+        });
         toast.success(`${newPosts.length} registros carregados para análise individual nesta sessão.`);
         return;
       }
@@ -235,7 +251,7 @@ export function useInstagramData() {
         await loadFromDatabase();
       } catch (upsertError) {
         const mergedPosts = mergePosts(posts, newPosts, mode);
-        setPosts(mergedPosts);
+        applyBasePosts(mergedPosts);
         setTotalAvailable(mergedPosts.length);
         setIsLimited(false);
         setLastLoadedAt(new Date());
@@ -251,6 +267,15 @@ export function useInstagramData() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const restoreBaseData = () => {
+    setPosts(basePosts);
+    setTotalAvailable(basePosts.length);
+    setIsLimited(false);
+    setLastLoadedAt(new Date());
+    setSessionSample({ active: false, originalCount: basePosts.length });
+    toast.success('Visão original restaurada.');
   };
 
   const summary = useMemo(() => {
@@ -287,10 +312,12 @@ export function useInstagramData() {
     error, 
     summary, 
     addUploadedData, 
+    restoreBaseData,
     isSaving,
     refreshData: loadFromDatabase,
     totalAvailable,
     isLimited,
     lastLoadedAt,
+    sessionSample,
   };
 }

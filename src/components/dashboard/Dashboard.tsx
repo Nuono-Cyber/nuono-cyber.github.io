@@ -42,11 +42,13 @@ export function Dashboard() {
     error,
     summary,
     addUploadedData,
+    restoreBaseData,
     isSaving,
     refreshData,
     totalAvailable,
     isLimited,
     lastLoadedAt,
+    sessionSample,
   } = useInstagramData();
   const { isSuperAdmin, signOut } = useAuthContext();
   const navigate = useNavigate();
@@ -128,7 +130,14 @@ export function Dashboard() {
       case 'trends': return <TrendsTab posts={posts} />;
       case 'insights': return <InsightsTab posts={posts} />;
       case 'data': return isSuperAdmin ? (
-        <DataUpload onDataUploaded={addUploadedData} isSaving={isSaving} totalRecords={posts.length} onRefresh={refreshData} />
+        <DataUpload
+          onDataUploaded={addUploadedData}
+          isSaving={isSaving}
+          totalRecords={posts.length}
+          onRefresh={refreshData}
+          sessionSample={sessionSample}
+          onRestoreBase={restoreBaseData}
+        />
       ) : null;
       default: return <OverviewTab posts={posts} summary={summary} />;
     }

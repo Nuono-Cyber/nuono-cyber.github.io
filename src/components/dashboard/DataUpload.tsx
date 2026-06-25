@@ -12,10 +12,12 @@ import { analyzeTableSchema, type TableSchemaAnalysis } from '@/utils/dataProces
 import { type UploadMode } from '@/hooks/useInstagramData';
 
 interface DataUploadProps {
-  onDataUploaded: (type: 'csv' | 'excel', data: any[], mode: UploadMode) => void;
+  onDataUploaded: (type: 'csv' | 'excel', data: any[], mode: UploadMode, sourceName?: string) => void;
   isSaving?: boolean;
   totalRecords?: number;
   onRefresh?: () => void;
+  sessionSample?: { active: boolean; name?: string; originalCount: number };
+  onRestoreBase?: () => void;
 }
 
 interface PendingImport {
@@ -25,7 +27,14 @@ interface PendingImport {
   schema: TableSchemaAnalysis;
 }
 
-export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0, onRefresh }: DataUploadProps) {
+export function DataUpload({
+  onDataUploaded,
+  isSaving = false,
+  totalRecords = 0,
+  onRefresh,
+  sessionSample,
+  onRestoreBase,
+}: DataUploadProps) {
   const isLocalMode = api.isLocalToken();
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -116,7 +125,7 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
 
   const applyPendingImport = (mode: UploadMode) => {
     if (!pendingImport) return;
-    onDataUploaded(pendingImport.type, pendingImport.data, mode);
+    onDataUploaded(pendingImport.type, pendingImport.data, mode, pendingImport.fileName);
     setIsError(false);
     setMessage(
       mode === 'session'
@@ -179,6 +188,22 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         <Alert className={isError ? 'border-destructive/50 bg-destructive/10' : 'border-green-500/50 bg-green-500/10'}>
           {isError ? <AlertCircle className="h-4 w-4 text-destructive" /> : <CheckCircle className="h-4 w-4 text-green-600" />}
           <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+
+      {sessionSample?.active && (
+        <Alert className="border-primary/40 bg-primary/10">
+          <FileText className="h-4 w-4 text-primary" />
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Você está analisando uma amostra individual{sessionSample.name ? `: ${sessionSample.name}` : ''}. A base original tem {sessionSample.originalCount} registros.
+            </span>
+            {onRestoreBase && (
+              <Button type="button" variant="outline" size="sm" onClick={onRestoreBase} className="shrink-0">
+                Voltar à visão original
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
