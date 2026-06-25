@@ -6,6 +6,7 @@ export interface RagMessage {
 }
 
 type MetricKey = 'views' | 'reach' | 'likes' | 'comments' | 'shares' | 'saves' | 'engagementRate';
+type Intent = 'greeting' | 'summary' | 'ranking' | 'low_performance' | 'time' | 'format' | 'metric' | 'recommendation' | 'semantic';
 
 const STOP_WORDS = new Set([
   'a', 'ao', 'aos', 'as', 'com', 'como', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'entre',
@@ -21,6 +22,33 @@ const METRIC_LABELS: Record<MetricKey, string> = {
   shares: 'compartilhamentos',
   saves: 'salvamentos',
   engagementRate: 'taxa de engajamento',
+};
+
+const INTENT_PATTERNS: Record<Exclude<Intent, 'semantic'>, RegExp[]> = {
+  greeting: [/^(oi|ola|olá|bom dia|boa tarde|boa noite|help|ajuda)\b/],
+  summary: [/\b(resumo|geral|overview|panorama|performance|desempenho geral|resultado geral)\b/],
+  ranking: [
+    /\b(top|ranking|rank|lista|listar)\b/,
+    /\bmelhor(es)?\b.*\b(post(s)?|conteudo(s)?|publica(c|ç)(a|ã)o(ões|oes)?)\b/,
+    /\b(post(s)?|conteudo(s)?|publica(c|ç)(a|ã)o(ões|oes)?)\b.*\bmelhor(es)?\b/,
+    /\bmaior(es)?\b.*\b(view(s)?|visualiza(c|ç)(a|ã)o(ões|oes)?|alcance|engajamento|curtida(s)?|like(s)?|salvamento(s)?|comentario(s)?|comentário(s)?)\b/,
+    /\bquais\b.*\b(post(s)?|conteudo(s)?)\b/,
+  ],
+  low_performance: [
+    /\b(pior(es)?|baixo desempenho|menor(es)?|fraco(s)?|ruim|ruins|nao performou|não performou)\b/,
+  ],
+  time: [
+    /\b(horario|horário|hora|periodo|período|dia|semana|quando|postar|publicar)\b/,
+  ],
+  format: [
+    /\b(tipo|formato|reel(s)?|video(s)?|vídeo(s)?|carrossel|foto(s)?|conteudo|conteúdo)\b/,
+  ],
+  metric: [
+    /\b(engajamento|alcance|curtida(s)?|like(s)?|comentario(s)?|comentário(s)?|salvamento(s)?|compartilhamento(s)?|view(s)?|visualiza(c|ç)(a|ã)o(ões|oes)?)\b/,
+  ],
+  recommendation: [
+    /\b(recomenda(c|ç)(a|ã)o(ões|oes)?|sugest(a|ã)o(ões|oes)?|melhorar|otimizar|o que fazer|proximo passo|próximo passo|estrategia|estratégia|insight(s)?)\b/,
+  ],
 };
 
 function normalize(text: string) {
@@ -64,6 +92,26 @@ function getMetricFromQuestion(question: string): MetricKey {
   return 'views';
 }
 
+function detectIntent(question: string): Intent {
+  const q = normalize(question);
+  const orderedIntents: Exclude<Intent, 'semantic'>[] = [
+    'greeting',
+    'recommendation',
+    'low_performance',
+    'ranking',
+    'time',
+    'format',
+    'summary',
+    'metric',
+  ];
+
+  for (const intent of orderedIntents) {
+    if (INTENT_PATTERNS[intent].some((pattern) => pattern.test(q))) return intent;
+  }
+
+  return 'semantic';
+}
+
 function average(values: number[]) {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -80,6 +128,25 @@ function groupBy<T>(items: T[], keyGetter: (item: T) => string) {
 
 function metricValue(post: InstagramPost, metric: MetricKey) {
   return post[metric] || 0;
+}
+
+function maxOf(posts: InstagramPost[], valueGetter: (post: InstagramPost) => number) {
+  return Math.max(1, ...posts.map(valueGetter));
+}
+
+function performanceScore(post: InstagramPost, posts: InstagramPost[]) {
+  const views = post.views / maxOf(posts, (item) => item.views);
+  const reach = post.reach / maxOf(posts, (item) => item.reach);
+  const interactions = post.engagementTotal / maxOf(posts, (item) => item.engagementTotal);
+  const engagementRate = post.engagementRate / maxOf(posts, (item) => item.engagementRate);
+  const savesAndShares = (post.saves + post.shares) / maxOf(posts, (item) => item.saves + item.shares);
+
+  return (views * 0.32) + (reach * 0.22) + (interactions * 0.2) + (engagementRate * 0.16) + (savesAndShares * 0.1);
+}
+
+function hasExplicitMetric(question: string) {
+  const q = normalize(question);
+  return /\b(engajamento|alcance|curtida|like|coment|salv|compart|view|visualiz)\b/.test(q);
 }
 
 function buildPostText(post: InstagramPost) {
@@ -159,19 +226,41 @@ function answerSummary(posts: InstagramPost[]) {
   ].filter(Boolean).join('\n\n');
 }
 
-function answerTopPosts(question: string, posts: InstagramPost[]) {
+function postEvidenceLine(post: InstagramPost) {
+  return [
+    `${truncate(post.description)}`,
+    `${formatNumber(post.views)} views`,
+    `${formatNumber(post.reach)} alcance`,
+    `${formatPercent(post.engagementRate)} eng.`,
+    post.postType,
+    post.publishedAt.toLocaleDateString('pt-BR'),
+  ].join(' | ');
+}
+
+function answerTopPosts(question: string, posts: InstagramPost[], direction: 'best' | 'worst' = 'best') {
   const metric = getMetricFromQuestion(question);
-  const top = [...posts].sort((a, b) => metricValue(b, metric) - metricValue(a, metric)).slice(0, 3);
-  const label = METRIC_LABELS[metric];
+  const explicitMetric = hasExplicitMetric(question);
+  const ranked = [...posts].sort((a, b) => {
+    const aValue = explicitMetric ? metricValue(a, metric) : performanceScore(a, posts);
+    const bValue = explicitMetric ? metricValue(b, metric) : performanceScore(b, posts);
+    return direction === 'best' ? bValue - aValue : aValue - bValue;
+  }).slice(0, 5);
+
+  const label = explicitMetric ? METRIC_LABELS[metric] : 'score composto de performance';
+  const heading = direction === 'best' ? 'melhores' : 'posts com menor performance';
 
   return [
-    `Os 3 melhores posts por ${label}:`,
-    ...top.map((post, index) => {
-      const value = metric === 'engagementRate' ? formatPercent(post.engagementRate) : formatNumber(metricValue(post, metric));
-      return `${index + 1}. ${value} - ${truncate(post.description)}`;
+    `Encontrei os ${heading} por ${label}:`,
+    ...ranked.map((post, index) => {
+      const value = explicitMetric
+        ? metric === 'engagementRate' ? formatPercent(post.engagementRate) : formatNumber(metricValue(post, metric))
+        : `${Math.round(performanceScore(post, posts) * 100)} pts`;
+      return `${index + 1}. ${value} - ${postEvidenceLine(post)}`;
     }),
     '',
-    'Eu usaria esses posts como referência de formato, gancho inicial e tema para os próximos conteúdos.',
+    direction === 'best'
+      ? 'Leitura prática: use esses posts como base para repetir tema, abertura, duração, CTA e horário.'
+      : 'Leitura prática: compare esses posts com o top 5 para identificar tema, horário ou formato que reduziu retenção e interação.',
   ].join('\n');
 }
 
@@ -235,6 +324,32 @@ function answerMetric(question: string, posts: InstagramPost[]) {
   ].filter(Boolean).join('\n\n');
 }
 
+function answerRecommendation(posts: InstagramPost[]) {
+  const top = [...posts].sort((a, b) => performanceScore(b, posts) - performanceScore(a, posts)).slice(0, Math.max(3, Math.ceil(posts.length * 0.15)));
+  const bottom = [...posts].sort((a, b) => performanceScore(a, posts) - performanceScore(b, posts)).slice(0, Math.max(3, Math.ceil(posts.length * 0.15)));
+  const bestDay = Object.entries(groupBy(top, (post) => post.dayName))
+    .map(([label, items]) => ({ label, count: items.length }))
+    .sort((a, b) => b.count - a.count)[0];
+  const bestHour = Object.entries(groupBy(top, (post) => String(post.hour).padStart(2, '0')))
+    .map(([label, items]) => ({ label, count: items.length }))
+    .sort((a, b) => b.count - a.count)[0];
+  const bestFormat = Object.entries(groupBy(top, (post) => post.postType || 'Desconhecido'))
+    .map(([label, items]) => ({ label, count: items.length }))
+    .sort((a, b) => b.count - a.count)[0];
+  const avgTopViews = average(top.map((post) => post.views));
+  const avgBottomViews = average(bottom.map((post) => post.views));
+  const lift = avgBottomViews > 0 ? ((avgTopViews / avgBottomViews) - 1) * 100 : 0;
+
+  return [
+    'Minhas recomendações com base nos dados carregados:',
+    `1. Replique os padrões do top 15%: eles têm média de ${formatNumber(avgTopViews)} views, ${formatNumber(lift)}% acima do grupo mais fraco.`,
+    bestDay ? `2. Priorize ${bestDay.label} para conteúdos importantes, porque aparece com mais frequência entre os melhores posts.` : '',
+    bestHour ? `3. Teste publicações perto de ${bestHour.label}h e acompanhe por pelo menos 5 novos posts antes de fixar como regra.` : '',
+    bestFormat ? `4. Use ${bestFormat.label} como formato principal de teste, mantendo variações de tema e CTA.` : '',
+    '5. Para cada novo conteúdo, compare contra: visualizações, alcance, taxa de engajamento, salvamentos e compartilhamentos. Views sozinhas podem esconder post que converte melhor.',
+  ].filter(Boolean).join('\n');
+}
+
 function answerSemantic(question: string, posts: InstagramPost[]) {
   const results = semanticSearch(question, posts);
   if (!results.length) {
@@ -261,24 +376,26 @@ function answerSemantic(question: string, posts: InstagramPost[]) {
 }
 
 export function answerWithLocalRag(question: string, posts: InstagramPost[], history: RagMessage[] = []) {
-  const q = normalize(question);
+  const intent = detectIntent(question);
 
   if (!posts.length) {
     return 'Ainda não há posts carregados para consulta. Importe um CSV/Excel ou aguarde o carregamento local para eu analisar os dados.';
   }
 
-  if (/^(oi|ola|olá|bom dia|boa tarde|boa noite|help|ajuda)\b/.test(q)) {
+  if (intent === 'greeting') {
     return [
       'Estou pronto. Eu respondo com RAG local usando os posts carregados no dashboard, sem depender do Supabase.',
-      'Você pode perguntar coisas como: melhores posts, melhor horário, dia com mais engajamento, tipo de conteúdo, salvamentos, alcance, comentários ou qualquer tema das legendas.',
+      'Você pode perguntar coisas como: "Quais os melhores posts?", "Qual melhor horário?", "O que devo melhorar?", "Quais formatos performam mais?" ou qualquer tema das legendas.',
     ].join('\n\n');
   }
 
-  if (q.includes('resumo') || q.includes('geral') || q.includes('performance')) return answerSummary(posts);
-  if (q.includes('melhor horario') || q.includes('horario') || q.includes('hora') || q.includes('melhor dia') || q.includes('dia')) return answerDayOrHour(question, posts);
-  if (q.includes('top') || q.includes('melhor post') || q.includes('maior') || q.includes('ranking')) return answerTopPosts(question, posts);
-  if (q.includes('tipo') || q.includes('formato') || q.includes('reel') || q.includes('video') || q.includes('carrossel')) return answerContentType(posts);
-  if (q.includes('engaj') || q.includes('alcance') || q.includes('curtida') || q.includes('like') || q.includes('coment') || q.includes('salv') || q.includes('compart') || q.includes('view') || q.includes('visualiz')) return answerMetric(question, posts);
+  if (intent === 'recommendation') return answerRecommendation(posts);
+  if (intent === 'low_performance') return answerTopPosts(question, posts, 'worst');
+  if (intent === 'ranking') return answerTopPosts(question, posts);
+  if (intent === 'time') return answerDayOrHour(question, posts);
+  if (intent === 'format') return answerContentType(posts);
+  if (intent === 'summary') return answerSummary(posts);
+  if (intent === 'metric') return answerMetric(question, posts);
 
   const lastUserQuestion = [...history].reverse().find((message) => message.role === 'user')?.content;
   const expandedQuestion = lastUserQuestion ? `${lastUserQuestion} ${question}` : question;

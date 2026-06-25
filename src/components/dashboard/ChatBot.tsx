@@ -19,6 +19,12 @@ interface ChatBotProps {
   posts: InstagramPost[];
 }
 
+const suggestedPrompts = [
+  'Quais os melhores posts?',
+  'Qual melhor horário?',
+  'O que devo melhorar?',
+];
+
 export function ChatBot({ isOpen, onOpenChange, posts }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -44,7 +50,7 @@ export function ChatBot({ isOpen, onOpenChange, posts }: ChatBotProps) {
     setInput('');
     setIsLoading(true);
     window.setTimeout(() => {
-      const answer = answerWithLocalRag(messageText, posts, messages);
+      const answer = answerWithLocalRag(messageText, posts, nextMessages);
       setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
       setIsLoading(false);
     }, 220);
@@ -96,6 +102,23 @@ export function ChatBot({ isOpen, onOpenChange, posts }: ChatBotProps) {
               {isLoading && <div className="flex gap-2 items-center"><Loader2 className="h-4 w-4 animate-spin" /><span className="text-sm">Analisando...</span></div>}
             </div>
           </ScrollArea>
+          <div className="border-t border-border/60 px-3 py-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {suggestedPrompts.map((prompt) => (
+                <Button
+                  key={prompt}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => sendMessage(prompt)}
+                  className="h-8 shrink-0 rounded-md px-3 text-xs"
+                >
+                  {prompt}
+                </Button>
+              ))}
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="p-3 border-t flex gap-2">
             <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Pergunte algo..." disabled={isLoading} />
             <Button type="submit" size="icon" disabled={isLoading || !input.trim()}><Send className="h-4 w-4" /></Button>
