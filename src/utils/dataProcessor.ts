@@ -7,14 +7,110 @@ interface CSVRow {
   [key: string]: string;
 }
 
-function getRowValue(row: CSVRow, keys: string[]) {
+export interface TableSchemaAnalysis {
+  columns: string[];
+  mappedFields: Array<{ field: string; label: string; sourceColumn: string | null; required?: boolean }>;
+  missingRequired: string[];
+  missingRecommended: string[];
+  confidence: number;
+}
+
+const FIELD_ALIASES = {
+  id: ['Identificação do post', 'post_id', 'id', 'media_id', 'media id', 'post id', 'ID da publicação', 'ID do post'],
+  accountId: ['Identificação da conta', 'account_id', 'account id', 'instagram_user_id', 'owner_id', 'ID da conta'],
+  username: ['Nome de usuário da conta', 'username', 'user_name', 'handle', 'conta', 'usuário', 'usuario'],
+  accountName: ['Nome da conta', 'account_name', 'account name', 'name', 'nome'],
+  description: ['Descrição', 'description', 'caption', 'legenda', 'texto', 'text', 'copy'],
+  duration: ['Duração (s)', 'duration', 'duration_seconds', 'duração', 'duracao', 'video duration'],
+  publishedAt: ['Horário de publicação', 'published_at', 'timestamp', 'created_time', 'created at', 'date', 'Data', 'published date', 'publication date', 'data de publicação'],
+  permalink: ['Link permanente', 'permalink', 'url', 'link', 'post_url', 'media_url'],
+  postType: ['Tipo de post', 'post_type', 'media_type', 'type', 'formato', 'tipo', 'content type'],
+  views: ['Visualizações', 'views', 'plays', 'video_views', 'reel plays', 'reproduções', 'reproducoes', 'impressions'],
+  reach: ['Alcance', 'reach', 'accounts_reached', 'alcance total'],
+  likes: ['Curtidas', 'likes', 'like_count', 'curtidas totais'],
+  comments: ['Comentários', 'comments', 'comments_count', 'comment_count', 'comentarios', 'comentários totais'],
+  shares: ['Compartilhamentos', 'shares', 'share_count', 'compartilhamentos totais'],
+  saves: ['Salvamentos', 'saves', 'saved', 'save_count', 'salvos'],
+  follows: ['Seguimentos', 'follows', 'follower_count', 'new followers', 'novos seguidores', 'seguidores'],
+} as const;
+
+const FIELD_LABELS: Record<keyof typeof FIELD_ALIASES, string> = {
+  id: 'ID do post',
+  accountId: 'ID da conta',
+  username: 'Usuário',
+  accountName: 'Nome da conta',
+  description: 'Legenda/descrição',
+  duration: 'Duração',
+  publishedAt: 'Data de publicação',
+  permalink: 'Link permanente',
+  postType: 'Tipo de post',
+  views: 'Visualizações',
+  reach: 'Alcance',
+  likes: 'Curtidas',
+  comments: 'Comentários',
+  shares: 'Compartilhamentos',
+  saves: 'Salvamentos',
+  follows: 'Seguimentos',
+};
+
+const REQUIRED_FIELDS: Array<keyof typeof FIELD_ALIASES> = ['publishedAt'];
+const RECOMMENDED_FIELDS: Array<keyof typeof FIELD_ALIASES> = ['id', 'description', 'views', 'reach', 'likes', 'comments', 'shares', 'saves'];
+
+function normalizeColumnKey(value: string) {
+  return String(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function getColumnMap(row: CSVRow) {
+  const map = new Map<string, string>();
+  Object.keys(row).forEach((column) => {
+    map.set(normalizeColumnKey(column), column);
+  });
+  return map;
+}
+
+function findColumn(row: CSVRow, keys: readonly string[]) {
+  const columnMap = getColumnMap(row);
   for (const key of keys) {
-    const value = row[key];
+    const exactValue = row[key];
+    if (exactValue !== undefined) return key;
+    const normalized = normalizeColumnKey(key);
+    const mappedColumn = columnMap.get(normalized);
+    if (mappedColumn) return mappedColumn;
+  }
+  return null;
+}
+
+function getRowValue(row: CSVRow, keys: readonly string[]) {
+  const column = findColumn(row, keys);
+  if (column) {
+    const value = row[column];
     if (value !== undefined && value !== null && String(value).trim() !== '') {
       return value;
     }
   }
   return '';
+}
+
+export function analyzeTableSchema(rows: CSVRow[]): TableSchemaAnalysis {
+  const sampleRow = rows.find((row) => Object.values(row).some((value) => String(value || '').trim() !== '')) || rows[0] || {};
+  const columns = Object.keys(sampleRow);
+  const mappedFields = (Object.entries(FIELD_ALIASES) as Array<[keyof typeof FIELD_ALIASES, readonly string[]]>).map(([field, aliases]) => ({
+    field,
+    label: FIELD_LABELS[field],
+    sourceColumn: findColumn(sampleRow, aliases),
+    required: REQUIRED_FIELDS.includes(field),
+  }));
+  const mappedCount = mappedFields.filter((item) => item.sourceColumn).length;
+  const missingRequired = REQUIRED_FIELDS.filter((field) => !mappedFields.find((item) => item.field === field)?.sourceColumn).map((field) => FIELD_LABELS[field]);
+  const missingRecommended = RECOMMENDED_FIELDS.filter((field) => !mappedFields.find((item) => item.field === field)?.sourceColumn).map((field) => FIELD_LABELS[field]);
+  const confidence = mappedFields.length ? Math.round((mappedCount / mappedFields.length) * 100) : 0;
+
+  return { columns, mappedFields, missingRequired, missingRecommended, confidence };
 }
 
 export function parseCSVData(csvText: string): InstagramPost[] {
@@ -24,16 +120,16 @@ export function parseCSVData(csvText: string): InstagramPost[] {
   });
 
   return result.data.map((row: CSVRow, index: number) => {
-    const publishedAt = parseDate(getRowValue(row, ['Horário de publicação', 'published_at']));
-    const description = getRowValue(row, ['Descrição', 'description']);
-    const views = parseNumber(getRowValue(row, ['Visualizações', 'views']));
-    const reach = parseNumber(getRowValue(row, ['Alcance', 'reach']));
-    const likes = parseNumber(getRowValue(row, ['Curtidas', 'likes']));
-    const comments = parseNumber(getRowValue(row, ['Comentários', 'comments']));
-    const shares = parseNumber(getRowValue(row, ['Compartilhamentos', 'shares']));
-    const saves = parseNumber(getRowValue(row, ['Salvamentos', 'saves']));
-    const follows = parseNumber(getRowValue(row, ['Seguimentos', 'follows']));
-    const duration = parseNumber(getRowValue(row, ['Duração (s)', 'duration']));
+    const publishedAt = parseDate(getRowValue(row, FIELD_ALIASES.publishedAt));
+    const description = getRowValue(row, FIELD_ALIASES.description);
+    const views = parseNumber(getRowValue(row, FIELD_ALIASES.views));
+    const reach = parseNumber(getRowValue(row, FIELD_ALIASES.reach));
+    const likes = parseNumber(getRowValue(row, FIELD_ALIASES.likes));
+    const comments = parseNumber(getRowValue(row, FIELD_ALIASES.comments));
+    const shares = parseNumber(getRowValue(row, FIELD_ALIASES.shares));
+    const saves = parseNumber(getRowValue(row, FIELD_ALIASES.saves));
+    const follows = parseNumber(getRowValue(row, FIELD_ALIASES.follows));
+    const duration = parseNumber(getRowValue(row, FIELD_ALIASES.duration));
 
     const engagementTotal = likes + comments + shares + saves;
     const engagementRate = reach > 0 ? (engagementTotal / reach) * 100 : 0;
@@ -44,15 +140,15 @@ export function parseCSVData(csvText: string): InstagramPost[] {
     const hashtags = description.match(/#\w+/g) || [];
 
     return {
-      id: getRowValue(row, ['Identificação do post', 'post_id', 'id']) || `post-${index}`,
-      accountId: getRowValue(row, ['Identificação da conta', 'account_id']),
-      username: getRowValue(row, ['Nome de usuário da conta', 'username']),
-      accountName: getRowValue(row, ['Nome da conta', 'account_name']),
+      id: getRowValue(row, FIELD_ALIASES.id) || `post-${index}`,
+      accountId: getRowValue(row, FIELD_ALIASES.accountId),
+      username: getRowValue(row, FIELD_ALIASES.username),
+      accountName: getRowValue(row, FIELD_ALIASES.accountName),
       description,
       duration,
       publishedAt,
-      permalink: getRowValue(row, ['Link permanente', 'permalink']),
-      postType: getRowValue(row, ['Tipo de post', 'post_type']) || 'Reel do Instagram',
+      permalink: getRowValue(row, FIELD_ALIASES.permalink),
+      postType: getRowValue(row, FIELD_ALIASES.postType) || 'Reel do Instagram',
       views,
       reach,
       likes,

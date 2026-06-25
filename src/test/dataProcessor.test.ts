@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCSVData } from '@/utils/dataProcessor';
+import { analyzeTableSchema, parseCSVData } from '@/utils/dataProcessor';
 
 function readFixtureLines(relativePath: string, lineCount = 3) {
   const fullPath = path.resolve(process.cwd(), relativePath);
@@ -56,5 +56,45 @@ describe('parseCSVData', () => {
       saves: 2,
     });
     expect(posts[0].publishedAt.toISOString()).toContain('2027-08-01T17:39:00');
+  });
+
+  it('maps similar English table headers for individual analysis uploads', () => {
+    const csv = [
+      'media_id,username,caption,timestamp,permalink,media_type,plays,reach,like_count,comments_count,share_count,save_count',
+      'abc123,nadsongl,"Hook forte para teste","2026-03-10 09:30",https://instagram.com/p/abc,REELS,12000,9000,800,44,60,180',
+    ].join('\n');
+    const posts = parseCSVData(csv);
+    const schema = analyzeTableSchema([
+      {
+        media_id: 'abc123',
+        username: 'nadsongl',
+        caption: 'Hook forte para teste',
+        timestamp: '2026-03-10 09:30',
+        permalink: 'https://instagram.com/p/abc',
+        media_type: 'REELS',
+        plays: '12000',
+        reach: '9000',
+        like_count: '800',
+        comments_count: '44',
+        share_count: '60',
+        save_count: '180',
+      },
+    ]);
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatchObject({
+      id: 'abc123',
+      description: 'Hook forte para teste',
+      postType: 'REELS',
+      views: 12000,
+      reach: 9000,
+      likes: 800,
+      comments: 44,
+      shares: 60,
+      saves: 180,
+    });
+    expect(schema.missingRequired).toHaveLength(0);
+    expect(schema.mappedFields.find((field) => field.field === 'description')?.sourceColumn).toBe('caption');
+    expect(schema.mappedFields.find((field) => field.field === 'views')?.sourceColumn).toBe('plays');
   });
 });

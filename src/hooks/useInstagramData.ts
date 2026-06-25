@@ -6,6 +6,7 @@ import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
 
 const FALLBACK_CSV_PATH = '/data/instagram_posts-export-2026-05-02_09-17-47.csv';
+export type UploadMode = 'session' | 'replace' | 'increment';
 
 interface DbInstagramPost {
   id: string;
@@ -119,8 +120,8 @@ async function loadFallbackPosts() {
   return parseCSVData(csvText);
 }
 
-function mergePosts(currentPosts: InstagramPost[], newPosts: InstagramPost[], mode: 'replace' | 'increment') {
-  if (mode === 'replace') return newPosts;
+function mergePosts(currentPosts: InstagramPost[], newPosts: InstagramPost[], mode: UploadMode) {
+  if (mode === 'replace' || mode === 'session') return newPosts;
   const postMap = new Map(currentPosts.map((post) => [post.id, post]));
   newPosts.forEach((post) => postMap.set(post.id, post));
   return Array.from(postMap.values()).sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
@@ -184,7 +185,7 @@ export function useInstagramData() {
     loadFromDatabase();
   }, []);
 
-  const addUploadedData = async (type: 'csv' | 'excel', data: any[], mode: 'replace' | 'increment' = 'increment') => {
+  const addUploadedData = async (type: 'csv' | 'excel', data: any[], mode: UploadMode = 'increment') => {
     setIsSaving(true);
     let newPosts: InstagramPost[] = [];
 
@@ -196,6 +197,16 @@ export function useInstagramData() {
       if (newPosts.length === 0) {
         toast.error('Nenhum registro válido encontrado no arquivo');
         setIsSaving(false);
+        return;
+      }
+
+      if (mode === 'session') {
+        setPosts(newPosts);
+        setTotalAvailable(newPosts.length);
+        setIsLimited(false);
+        setLastLoadedAt(new Date());
+        setError(null);
+        toast.success(`${newPosts.length} registros carregados para análise individual nesta sessão.`);
         return;
       }
 

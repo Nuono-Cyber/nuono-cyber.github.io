@@ -8,18 +8,29 @@ import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Database, RefreshC
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import { api, type MetaConfigResponse } from '@/lib/api';
+import { analyzeTableSchema, type TableSchemaAnalysis } from '@/utils/dataProcessor';
+import { type UploadMode } from '@/hooks/useInstagramData';
 
 interface DataUploadProps {
-  onDataUploaded: (type: 'csv' | 'excel', data: any[], mode: 'replace' | 'increment') => void;
+  onDataUploaded: (type: 'csv' | 'excel', data: any[], mode: UploadMode) => void;
   isSaving?: boolean;
   totalRecords?: number;
   onRefresh?: () => void;
 }
 
+interface PendingImport {
+  type: 'csv' | 'excel';
+  fileName: string;
+  data: any[];
+  schema: TableSchemaAnalysis;
+}
+
 export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0, onRefresh }: DataUploadProps) {
+  const isLocalMode = api.isLocalToken();
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [metaConfig, setMetaConfig] = useState<MetaConfigResponse | null>(null);
   const [metaForm, setMetaForm] = useState({
     instagramUserId: '',
@@ -30,11 +41,14 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
   const [isMetaLoading, setIsMetaLoading] = useState(true);
   const [isMetaSaving, setIsMetaSaving] = useState(false);
   const [isMetaSyncing, setIsMetaSyncing] = useState(false);
-  const sampleInputRef = useRef<HTMLInputElement>(null);
-  const incrementInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadMetaConfig = async () => {
+      if (isLocalMode) {
+        setIsMetaLoading(false);
+        return;
+      }
       try {
         const config = await api.meta.config();
         setMetaConfig(config);
@@ -52,9 +66,9 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
     };
 
     loadMetaConfig();
-  }, []);
+  }, [isLocalMode]);
 
-  const handleFileUpload = async (file: File, mode: 'replace' | 'increment') => {
+  const handleFileUpload = async (file: File) => {
     setIsUploading(true);
     setMessage(null);
     try {
@@ -74,13 +88,17 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         data = result.data;
       }
 
-      onDataUploaded(isExcel ? 'excel' : 'csv', data, mode);
+      if (data.length === 0) throw new Error('Arquivo sem registros válidos');
+
+      const schema = analyzeTableSchema(data);
+      setPendingImport({
+        type: isExcel ? 'excel' : 'csv',
+        fileName: file.name,
+        data,
+        schema,
+      });
       setIsError(false);
-      setMessage(
-        mode === 'replace'
-          ? `${isExcel ? 'Excel' : 'CSV'} carregado como amostra com ${data.length} registros.`
-          : `${isExcel ? 'Excel' : 'CSV'} incrementado com ${data.length} registros.`
-      );
+      setMessage(`${isExcel ? 'Excel' : 'CSV'} lido com ${data.length} registros. Escolha como deseja usar esta tabela.`);
     } catch (error: any) {
       setIsError(true);
       setMessage(error.message || 'Erro ao processar arquivo');
@@ -90,10 +108,24 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
     }
   };
 
-  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>, mode: 'replace' | 'increment') => {
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) handleFileUpload(file, mode);
+    if (file) handleFileUpload(file);
     event.target.value = '';
+  };
+
+  const applyPendingImport = (mode: UploadMode) => {
+    if (!pendingImport) return;
+    onDataUploaded(pendingImport.type, pendingImport.data, mode);
+    setIsError(false);
+    setMessage(
+      mode === 'session'
+        ? `${pendingImport.fileName} carregado como análise individual nesta sessão.`
+        : mode === 'replace'
+          ? `${pendingImport.fileName} substituirá a base analisada.`
+          : `${pendingImport.fileName} será incrementado à base existente.`
+    );
+    setPendingImport(null);
   };
 
   const handleMetaSave = async () => {
@@ -136,7 +168,7 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         <div className="flex items-center gap-3">
           <Database className="h-5 w-5 text-primary" />
           <div>
-            <div className="font-medium">Banco Supabase</div>
+            <div className="font-medium">{isLocalMode ? 'Base local' : 'Banco Supabase'}</div>
             <div className="text-sm text-muted-foreground">{totalRecords} registros</div>
           </div>
         </div>
@@ -154,49 +186,85 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         <div>
           <Label className="text-sm font-medium">Fluxo de importação</Label>
           <p className="text-xs text-muted-foreground mt-1">
-            Carregue uma amostra para reiniciar a base analisada ou incremente a análise com novos arquivos.
+            Envie uma tabela para análise individual ou incremente a base atual após validar as colunas detectadas.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border p-4 space-y-3">
-            <div>
-              <div className="font-medium">Analisar amostra</div>
-              <div className="text-xs text-muted-foreground">Substitui a base atual pelos dados do arquivo enviado.</div>
+        <div className="rounded-lg border p-4 space-y-3">
+          <div>
+            <div className="font-medium">Escolher CSV ou Excel</div>
+            <div className="text-xs text-muted-foreground">
+              O sistema detecta colunas semelhantes, como caption/descrição, timestamp/data, views/visualizações e reach/alcance.
             </div>
-            <Input
-              id="sample-upload"
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              ref={sampleInputRef}
-              onChange={(event) => handleUpload(event, 'replace')}
-              disabled={isUploading || isSaving}
-            />
-            <Button onClick={() => sampleInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full" variant="secondary">
-              {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-              Enviar amostra
-            </Button>
           </div>
-
-          <div className="rounded-lg border p-4 space-y-3">
-            <div>
-              <div className="font-medium">Incrementar análise</div>
-              <div className="text-xs text-muted-foreground">Mantém a base atual e faz upsert incremental por post_id.</div>
-            </div>
-            <Input
-              id="increment-upload"
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              ref={incrementInputRef}
-              onChange={(event) => handleUpload(event, 'increment')}
-              disabled={isUploading || isSaving}
-            />
-            <Button onClick={() => incrementInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
-              {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-              Enviar incremento
-            </Button>
-          </div>
+          <Input
+            id="table-upload"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            ref={fileInputRef}
+            onChange={handleUpload}
+            disabled={isUploading || isSaving}
+          />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSaving} className="w-full">
+            {isUploading || isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+            Ler tabela
+          </Button>
         </div>
+
+        {pendingImport && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="font-medium">{pendingImport.fileName}</div>
+                <div className="text-xs text-muted-foreground">
+                  {pendingImport.data.length} registros, {pendingImport.schema.columns.length} colunas, confiança de mapeamento {pendingImport.schema.confidence}%.
+                </div>
+              </div>
+              <div className="rounded-md bg-background px-2 py-1 text-xs text-muted-foreground">
+                Base atual: {totalRecords} registros
+              </div>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              {pendingImport.schema.mappedFields.filter((field) => field.sourceColumn).map((field) => (
+                <div key={field.field} className="rounded-md border bg-background/70 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{field.label}: </span>
+                  <span className="font-medium">{field.sourceColumn}</span>
+                </div>
+              ))}
+            </div>
+
+            {(pendingImport.schema.missingRequired.length > 0 || pendingImport.schema.missingRecommended.length > 0) && (
+              <Alert className={pendingImport.schema.missingRequired.length > 0 ? 'border-destructive/50 bg-destructive/10' : ''}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {pendingImport.schema.missingRequired.length > 0
+                    ? `Campos obrigatórios não detectados: ${pendingImport.schema.missingRequired.join(', ')}.`
+                    : `Campos recomendados não detectados: ${pendingImport.schema.missingRecommended.join(', ')}.`}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="rounded-lg border bg-background/70 p-3">
+              <div className="text-sm font-medium">Como deseja usar esta tabela?</div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Para uma análise individual, o dashboard passa a usar apenas este arquivo nesta sessão. Para incremento, registros com o mesmo ID de post são atualizados e novos posts são adicionados.
+              </p>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-3">
+              <Button variant="secondary" onClick={() => applyPendingImport('session')} disabled={isSaving || pendingImport.schema.missingRequired.length > 0}>
+                Analisar individualmente
+              </Button>
+              <Button variant="outline" onClick={() => applyPendingImport('replace')} disabled={isSaving || pendingImport.schema.missingRequired.length > 0}>
+                Substituir base
+              </Button>
+              <Button onClick={() => applyPendingImport('increment')} disabled={isSaving || pendingImport.schema.missingRequired.length > 0}>
+                Incrementar base existente
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Input
           className="hidden"
@@ -205,7 +273,7 @@ export function DataUpload({ onDataUploaded, isSaving = false, totalRecords = 0,
         />
         <div className="text-xs text-muted-foreground flex items-center gap-2">
           <FileText className="h-3 w-3" />
-          O fluxo de amostra reinicia a análise; o incremental adiciona ou atualiza registros existentes por post_id.
+          O sistema aceita CSV e Excel com nomes de colunas iguais ou semelhantes aos exports da Meta/Instagram.
         </div>
       </div>
 
