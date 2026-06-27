@@ -27,7 +27,7 @@ export default function Welcome() {
           <BrandMark />
           <nav className="hidden items-center gap-10 text-sm font-semibold lg:flex" aria-label="Navegação principal">
             <a href="#produto">Produto</a><a href="#recursos">Recursos</a><a href="#recursos">Preços</a>
-            <Button variant="outline" className="h-11 px-6" asChild><a href="#produto">Ver demo</a></Button>
+            <Button variant="outline" className="h-11 px-6" asChild><Link to="/demo">Ver demo</Link></Button>
             <Button className="h-11 px-7 shadow-[0_0_30px_hsl(var(--primary)/0.3)]" asChild><Link to="/auth">Entrar</Link></Button>
           </nav>
           <Button variant="outline" size="icon" className="h-11 w-11 lg:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></Button>
@@ -50,7 +50,7 @@ export default function Welcome() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-[52px] gap-8 px-8 shadow-[0_0_30px_hsl(var(--primary)/0.28)]"><Link to="/auth">Entrar <ArrowRight className="h-4 w-4" /></Link></Button>
-                <Button asChild variant="outline" size="lg" className="h-[52px] gap-3 px-7"><a href="#recursos"><Play className="h-4 w-4 text-primary" />Ver demonstração</a></Button>
+                <Button asChild variant="outline" size="lg" className="h-[52px] gap-3 px-7"><Link to="/demo"><Play className="h-4 w-4 text-primary" />Ver demonstração</Link></Button>
               </div>
               <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
                 <span>Importação por CSV/Excel hoje</span><span className="h-1 w-1 rounded-full bg-primary" /><span>Estrutura pronta para Meta Graph API</span>

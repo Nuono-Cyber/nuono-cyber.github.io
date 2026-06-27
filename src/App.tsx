@@ -12,6 +12,8 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminActivityLogs from "./pages/AdminActivityLogs";
 import NotFound from "./pages/NotFound";
+import Demo from "./pages/Demo";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -23,9 +25,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <PwaInstallPrompt />
             <Routes>
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/demo" element={<Demo />} />
               <Route 
                 path="/" 
                 element={

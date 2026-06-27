@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  demoMode?: boolean;
 }
 
 const analyticsItems = [
@@ -35,7 +36,7 @@ const adminItems = [
   { id: 'data', label: 'Importar Dados', icon: Settings },
 ];
 
-export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, demoMode = false }: AppSidebarProps) {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { user, isSuperAdmin } = useAuthContext();
@@ -75,7 +76,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isSuperAdmin && (
+        {isSuperAdmin && !demoMode && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-semibold">
               {!collapsed ? 'Administração' : ''}
@@ -130,19 +131,19 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
           <div className="space-y-3">
             <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <p className="text-[10px] uppercase text-muted-foreground">Perfil analisado</p>
-              <p className="mt-1 truncate text-xs font-semibold">@{user?.email?.split('@')[0] || 'influenciador'}</p>
-              <p className="mt-2 text-[10px] text-success">Base sincronizada</p>
+              <p className="mt-1 truncate text-xs font-semibold">@{demoMode ? 'perfil_demo' : user?.email?.split('@')[0] || 'influenciador'}</p>
+              <p className="mt-2 text-[10px] text-success">{demoMode ? 'Dados de demonstração' : 'Base sincronizada'}</p>
             </div>
             <div className="flex items-center gap-2 px-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10">
                 <span className="text-xs font-semibold text-primary">
-                  {user?.email?.charAt(0).toUpperCase()}
+                  {demoMode ? 'D' : user?.email?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="overflow-hidden flex-1">
-                <p className="text-xs font-medium truncate text-sidebar-foreground">{user?.email}</p>
+                <p className="text-xs font-medium truncate text-sidebar-foreground">{demoMode ? 'Experiência demo' : user?.email}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {isSuperAdmin ? 'Super Admin' : 'Usuário'}
+                  {demoMode ? 'Acesso público' : isSuperAdmin ? 'Super Admin' : 'Usuário'}
                 </p>
               </div>
               <ThemeSwitcher />

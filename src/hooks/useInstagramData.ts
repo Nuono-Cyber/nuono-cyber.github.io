@@ -127,7 +127,8 @@ function mergePosts(currentPosts: InstagramPost[], newPosts: InstagramPost[], mo
   return Array.from(postMap.values()).sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
 }
 
-export function useInstagramData() {
+export function useInstagramData(options: { demoMode?: boolean } = {}) {
+  const { demoMode = false } = options;
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [basePosts, setBasePosts] = useState<InstagramPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,7 +152,7 @@ export function useInstagramData() {
   const loadFromDatabase = useCallback(async () => {
     try {
       setIsLoading(true);
-      if (api.isLocalToken()) {
+      if (demoMode || api.isLocalToken()) {
         const fallbackPosts = await loadFallbackPosts();
         applyBasePosts(fallbackPosts);
         setTotalAvailable(fallbackPosts.length);
@@ -190,7 +191,7 @@ export function useInstagramData() {
     } finally {
       setIsLoading(false);
     }
-  }, [applyBasePosts]);
+  }, [applyBasePosts, demoMode]);
 
   useEffect(() => {
     loadFromDatabase();

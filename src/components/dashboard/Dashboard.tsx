@@ -16,7 +16,7 @@ import { TrendsTab } from './tabs/TrendsTab';
 import { ChatBot } from './ChatBot';
 import { DataUpload } from './DataUpload';
 import { InternalChat } from '@/components/chat/InternalChat';
-import { Loader2, Instagram, Calendar, LogOut, RefreshCw, Download, Bell, ChevronDown, Home, FileVideo, Plus, Users, Menu } from 'lucide-react';
+import { Loader2, Instagram, Calendar, LogOut, RefreshCw, Download, Bell, ChevronDown, Home, FileVideo, Plus, Users, Menu, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -52,7 +52,7 @@ function MobileNavigation({ activeTab, onTabChange, canImport }: { activeTab: st
   );
 }
 
-export function Dashboard() {
+export function Dashboard({ demoMode = false }: { demoMode?: boolean }) {
   const {
     posts,
     isLoading,
@@ -65,7 +65,7 @@ export function Dashboard() {
     totalAvailable,
     lastLoadedAt,
     sessionSample,
-  } = useInstagramData();
+  } = useInstagramData({ demoMode });
   const { user, isSuperAdmin, signOut } = useAuthContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
@@ -84,6 +84,10 @@ export function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
+    if (demoMode) {
+      navigate('/welcome');
+      return;
+    }
     await signOut();
     navigate('/auth', { replace: true });
   };
@@ -163,7 +167,7 @@ export function Dashboard() {
     <SidebarProvider>
       <div className="relative flex min-h-screen w-full bg-background">
         <WeatherBackground effect={weatherEffect} onEffectChange={setWeatherEffect} />
-        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} demoMode={demoMode} />
 
         <div className="relative z-10 flex min-w-0 flex-1 flex-col">
           <header className="dashboard-header">
@@ -171,13 +175,14 @@ export function Dashboard() {
               <div className="hidden min-w-0 items-center gap-3 md:flex">
                 <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
                 <div>
-                  <h1 className="truncate text-xl font-bold">Olá, {user?.email?.split('@')[0] === 'gabrielnbn' ? 'Gabriel' : 'Nadson'}!</h1>
+                  <h1 className="truncate text-xl font-bold">{demoMode ? 'Explore a demonstração' : `Olá, ${user?.email?.split('@')[0] === 'gabrielnbn' ? 'Gabriel' : 'Nadson'}!`}</h1>
                   <p className="truncate text-[11px] text-muted-foreground">{currentTab.description} de @{posts[0]?.username || 'nadsongl'}</p>
                 </div>
               </div>
               <BrandMark className="md:hidden" />
 
               <div className="flex items-center gap-2">
+                {demoMode && <Badge className="hidden gap-1.5 border-primary/30 bg-primary/10 text-primary md:flex"><Sparkles className="h-3 w-3" />Modo demo</Badge>}
                 <WeatherToggle effect={weatherEffect} onEffectChange={setWeatherEffect} />
                 <div className="hidden items-center gap-2 lg:flex">
                   <Badge variant="outline" className="h-10 gap-2 px-4 text-[11px] font-normal">
@@ -196,7 +201,7 @@ export function Dashboard() {
                 </div>
                 <ThemeSwitcher />
                 <Button variant="ghost" size="icon" className="relative hidden md:inline-flex"><Bell className="h-4 w-4" /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" /></Button>
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Sair"><LogOut className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={demoMode ? 'Sair da demonstração' : 'Sair'}><LogOut className="w-4 h-4" /></Button>
               </div>
             </div>
           </header>
@@ -204,7 +209,7 @@ export function Dashboard() {
           <main className="flex-1 overflow-auto p-3 pb-24 sm:p-4 md:p-5 md:pb-5">
             <div className="mx-auto max-w-[1680px]">
               <div className="mb-3 flex items-end justify-between gap-3 md:hidden">
-                <div><h1 className="text-xl font-bold">Olá, {user?.email?.split('@')[0] === 'gabrielnbn' ? 'Gabriel' : 'Nadson'}!</h1><p className="mt-1 text-xs text-muted-foreground">{currentTab.description}</p></div>
+                <div><h1 className="text-xl font-bold">{demoMode ? 'Demonstração interativa' : `Olá, ${user?.email?.split('@')[0] === 'gabrielnbn' ? 'Gabriel' : 'Nadson'}!`}</h1><p className="mt-1 text-xs text-muted-foreground">{currentTab.description}</p></div>
                 <Button variant="outline" size="sm" className="h-9 gap-2"><Calendar className="h-4 w-4" />Período</Button>
               </div>
               <div className="mb-3 flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
@@ -220,7 +225,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <MobileNavigation activeTab={activeTab} onTabChange={setActiveTab} canImport={isSuperAdmin} />
+      <MobileNavigation activeTab={activeTab} onTabChange={setActiveTab} canImport={!demoMode && isSuperAdmin} />
 
       {/* Floating Elements */}
       <InternalChat isOpen={internalChatOpen} onOpenChange={handleInternalChatOpenChange} />
