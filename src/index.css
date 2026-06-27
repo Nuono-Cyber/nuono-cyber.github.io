@@ -508,6 +508,10 @@
     overflow: hidden;
   }
 
+  [data-webgl='ready'] .dna-fallback {
+    display: none;
+  }
+
   .dna-fallback span {
     --phase: calc(var(--dna-index) * 18deg);
     position: absolute;
