@@ -50,6 +50,7 @@ export function MetricCard({
           <p className="text-[11px] text-muted-foreground">{trendLabel}</p>
         )}
       </div>
+      <div className="metric-sparkline" aria-hidden="true">{[3, 5, 4, 7, 5, 8, 7, 10, 9, 13, 11, 16].map((height, index) => <i key={index} style={{ height: `${height}px` }} />)}</div>
     </div>
   );
 }

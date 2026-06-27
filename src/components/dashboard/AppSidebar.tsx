@@ -3,9 +3,10 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BarChart3, Clock, FileVideo, Heart,
   TrendingUp, Target, LineChart, Lightbulb, Shield, Activity,
-  Instagram, Settings
+  Settings
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { BrandMark } from '@/components/BrandMark';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel,
   SidebarGroupContent, SidebarMenu, SidebarMenuItem,
@@ -41,23 +42,13 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   const navigate = useNavigate();
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10 shrink-0">
-            <Instagram className="w-5 h-5 text-primary" />
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <h1 className="text-sm font-bold truncate text-sidebar-foreground">NAD Analytics</h1>
-              <p className="text-[10px] text-muted-foreground truncate">Enterprise Dashboard</p>
-            </div>
-          )}
-        </div>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar/95">
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <BrandMark compact={collapsed} />
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarGroup>
+        <SidebarGroup className="pt-4">
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-semibold">
             {!collapsed ? 'Analytics' : ''}
           </SidebarGroupLabel>
@@ -68,9 +59,9 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                   <SidebarMenuButton
                     onClick={() => onTabChange(item.id)}
                     className={cn(
-                      'w-full transition-all duration-200',
+                      'h-10 w-full rounded-md transition-all duration-200',
                       activeTab === item.id
-                        ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+                        ? 'bg-gradient-to-r from-primary/30 to-accent/20 text-foreground font-semibold border border-primary/40 shadow-[0_0_20px_hsl(var(--primary)/0.12)]'
                         : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
                     )}
                     tooltip={collapsed ? item.label : undefined}
@@ -134,11 +125,16 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border">
+      <SidebarFooter className="border-t border-sidebar-border p-3">
         {!collapsed ? (
           <div className="space-y-3">
+            <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">Perfil analisado</p>
+              <p className="mt-1 truncate text-xs font-semibold">@{user?.email?.split('@')[0] || 'influenciador'}</p>
+              <p className="mt-2 text-[10px] text-success">Base sincronizada</p>
+            </div>
             <div className="flex items-center gap-2 px-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/10">
                 <span className="text-xs font-semibold text-primary">
                   {user?.email?.charAt(0).toUpperCase()}
                 </span>

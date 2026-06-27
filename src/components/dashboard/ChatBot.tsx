@@ -68,7 +68,7 @@ export function ChatBot({ isOpen, onOpenChange, posts }: ChatBotProps) {
         onClick={() => onOpenChange(true)}
         className={cn(
           'fixed z-50 h-14 w-14 rounded-full shadow-lg transition-[opacity,transform,box-shadow] duration-300 ease-out',
-          'bottom-24 right-5 sm:bottom-6 sm:right-24',
+          'bottom-24 right-[5.5rem] sm:bottom-6 sm:right-24',
           'hover:scale-105 focus-visible:scale-105',
           isOpen ? 'pointer-events-none scale-90 opacity-0' : 'opacity-100'
         )}
@@ -76,7 +76,7 @@ export function ChatBot({ isOpen, onOpenChange, posts }: ChatBotProps) {
         <MessageCircle className="h-6 w-6" />
       </Button>
       {isOpen && (
-        <Card className="fixed inset-x-4 bottom-4 z-50 flex h-[calc(100svh-2rem)] flex-col overflow-hidden border-border/60 bg-background/96 shadow-2xl backdrop-blur-xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[620px] sm:max-h-[calc(100vh-3rem)] sm:w-[420px]">
+        <Card className="fixed inset-x-4 bottom-20 z-50 flex h-[calc(100svh-6rem)] flex-col overflow-hidden border-border/60 bg-background/96 shadow-2xl backdrop-blur-xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[620px] sm:max-h-[calc(100vh-3rem)] sm:w-[420px]">
           <div className="border-b border-border/60 bg-secondary/35 p-4 flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">

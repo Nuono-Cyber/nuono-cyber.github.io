@@ -1,14 +1,16 @@
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowRight, BarChart3, Database, Instagram, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, BarChart3, Database, Menu, Play, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { DnaHelixScene } from '@/components/visuals/DnaHelixScene';
+import { BrandMark } from '@/components/BrandMark';
 
 const featureItems = [
-  { icon: BarChart3, label: 'Performance', text: 'Visões por alcance, engajamento, formato e período.' },
-  { icon: Database, label: 'Dados', text: 'Importação por CSV/Excel com caminho pronto para Meta Graph API.' },
-  { icon: ShieldCheck, label: 'Controle', text: 'Acesso protegido e operação administrativa centralizada.' },
+  { icon: BarChart3, label: 'Performance', text: 'Visão completa de alcance, engajamento e formato por período.', tone: 'primary' },
+  { icon: Database, label: 'Dados', text: 'Importação por CSV/Excel e integrações com Meta Graph API.', tone: 'primary' },
+  { icon: ShieldCheck, label: 'Controle', text: 'Operação centralizada e acesso seguro para sua equipe.', tone: 'accent' },
+  { icon: TrendingUp, label: 'Tendências', text: 'Identifique padrões, antecipe movimentos e tome decisões antes.', tone: 'violet' },
 ];
 
 export default function Welcome() {
@@ -19,65 +21,61 @@ export default function Welcome() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
-      <main className="relative min-h-screen">
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_82%_28%,hsl(var(--primary)/0.16),transparent_30%),radial-gradient(circle_at_62%_74%,hsl(var(--accent)/0.1),transparent_28%)]" />
+    <div className="welcome-page min-h-screen overflow-x-hidden bg-background text-foreground">
+      <header className="welcome-header">
+        <div className="mx-auto flex h-full w-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
+          <BrandMark />
+          <nav className="hidden items-center gap-10 text-sm font-semibold lg:flex" aria-label="Navegação principal">
+            <a href="#produto">Produto</a><a href="#recursos">Recursos</a><a href="#recursos">Preços</a>
+            <Button variant="outline" className="h-11 px-6" asChild><a href="#produto">Ver demo</a></Button>
+            <Button className="h-11 px-7 shadow-[0_0_30px_hsl(var(--primary)/0.3)]" asChild><Link to="/auth">Entrar</Link></Button>
+          </nav>
+          <Button variant="outline" size="icon" className="h-11 w-11 lg:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></Button>
+        </div>
+      </header>
 
-        <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Instagram className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold leading-tight">NAD Analytics</div>
-                <div className="text-xs text-muted-foreground">Instagram intelligence</div>
-              </div>
-            </div>
-          </header>
-
-          <div className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(420px,0.68fr)] lg:gap-12 lg:py-12">
-            <div className="relative z-10 max-w-3xl">
-              <Badge variant="outline" className="mb-5 gap-2 border-primary/30 bg-background/50 px-3 py-1 text-xs backdrop-blur">
+      <main id="produto" className="relative">
+        <div className="welcome-grid" />
+        <section className="relative z-10 mx-auto grid min-h-[calc(100vh-76px)] w-full max-w-[1440px] items-center gap-8 px-5 py-8 sm:px-8 lg:grid-cols-[0.88fr_1.12fr] lg:px-12 lg:py-10">
+            <div className="relative z-10 max-w-[620px]">
+              <Badge variant="outline" className="mb-6 gap-2 rounded-full border-primary/55 bg-background/60 px-4 py-1.5 text-xs backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Métricas, conteúdo e crescimento em uma visão executiva
               </Badge>
-              <h1 className="max-w-[12ch] text-4xl font-bold leading-[1.05] sm:max-w-[13ch] sm:text-5xl lg:max-w-[13ch] lg:text-6xl xl:text-7xl">
-                Análise estratégica para influenciadores que tratam conteúdo como negócio.
+              <h1 className="welcome-title">
+                Análise <span className="gradient-text">estratégica</span> para influenciadores que tratam conteúdo como negócio.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                O painel cruza posts, alcance, engajamento, tendências e previsões para transformar arquivos do Instagram em decisões claras. Hoje o fluxo aceita CSV e Excel; a base já está preparada para evoluir para sincronização automática pela Meta.
+              <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+                Centralize posts, alcance, engajamento, tendências e previsões para transformar dados do Instagram em decisões claras, rápido e pronto para ação.
               </p>
-              <div className="mt-8">
-                <Button asChild size="lg" className="h-12 gap-2 px-6">
-                  <Link to="/auth">
-                    Login
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="h-[52px] gap-8 px-8 shadow-[0_0_30px_hsl(var(--primary)/0.28)]"><Link to="/auth">Entrar <ArrowRight className="h-4 w-4" /></Link></Button>
+                <Button asChild variant="outline" size="lg" className="h-[52px] gap-3 px-7"><a href="#recursos"><Play className="h-4 w-4 text-primary" />Ver demonstração</a></Button>
+              </div>
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <span>Importação por CSV/Excel hoje</span><span className="h-1 w-1 rounded-full bg-primary" /><span>Estrutura pronta para Meta Graph API</span>
               </div>
             </div>
 
-            <div className="relative z-0 space-y-5">
-              <div className="relative h-[260px] overflow-hidden rounded-lg border border-border/60 bg-card/40 sm:h-[320px] lg:h-[540px]">
-                <DnaHelixScene
-                  intensity="hero"
-                  className="pointer-events-none absolute inset-0 opacity-95"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.08),hsl(var(--background)/0.5))]" />
+            <div className="relative z-0" id="recursos">
+              <div className="dna-showcase">
+                <DnaHelixScene intensity="hero" className="pointer-events-none absolute inset-0 opacity-100" />
+                <div className="dna-stat dna-stat-reach"><span>Alcance</span><strong>+24,6%</strong></div>
+                <div className="dna-stat dna-stat-engagement"><span>Engajamento</span><strong>+38,1%</strong></div>
+                <div className="dna-stat dna-stat-conversion"><span>Conversão</span><strong>+18,7%</strong></div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {featureItems.map((item) => (
-                  <div key={item.label} className="rounded-lg border border-border/70 bg-card/86 p-4 shadow-sm backdrop-blur">
-                    <item.icon className="mb-3 h-5 w-5 text-primary" />
+                  <div key={item.label} className="feature-tile">
+                    <div className={`feature-icon feature-icon-${item.tone}`}><item.icon className="h-5 w-5" /></div>
                     <div className="text-sm font-semibold">{item.label}</div>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.text}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.text}</p>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          <a href="#recursos" className="absolute bottom-4 left-1/2 hidden -translate-x-1/2 items-center gap-3 text-xs text-muted-foreground lg:flex"><ArrowDown className="h-4 w-4 text-primary" />Explore o poder dos seus dados</a>
         </section>
       </main>
     </div>

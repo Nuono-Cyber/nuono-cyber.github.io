@@ -23,11 +23,12 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
     let cleanup = () => {};
     let isDisposed = false;
     let scrollProgress = 0;
+    let targetScrollProgress = 0;
 
     const updateScroll = () => {
       if (!scrollLinked) return;
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      scrollProgress = window.scrollY / maxScroll;
+      targetScrollProgress = window.scrollY / maxScroll;
     };
 
     if (isDisposed || !hostRef.current) return;
@@ -49,6 +50,8 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
 
       const group = new THREE.Group();
       scene.add(group);
+      const fragmentGroup = new THREE.Group();
+      scene.add(fragmentGroup);
 
       const primary = new THREE.Color(readThemeColor('--primary', 'hsl(0 78% 54%)'));
       const accent = new THREE.Color(readThemeColor('--accent', 'hsl(216 74% 55%)'));
@@ -64,13 +67,13 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
 
       const strandMaterial = new THREE.MeshStandardMaterial({
         color: primary,
-        emissive: primary.clone().multiplyScalar(0.2),
+        emissive: primary.clone().multiplyScalar(0.3),
         metalness: 0.35,
         roughness: 0.24,
       });
       const pairedStrandMaterial = new THREE.MeshStandardMaterial({
         color: accent,
-        emissive: accent.clone().multiplyScalar(0.18),
+        emissive: accent.clone().multiplyScalar(0.28),
         metalness: 0.28,
         roughness: 0.28,
       });
@@ -85,14 +88,50 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
         color: accent,
         size: intensity === 'hero' ? 0.045 : 0.034,
         transparent: true,
-        opacity: 0.56,
+        opacity: 0.7,
         depthWrite: false,
       });
 
-      const sphereGeometry = new THREE.SphereGeometry(intensity === 'hero' ? 0.085 : 0.065, 18, 18);
-      const rungGeometry = new THREE.CylinderGeometry(0.018, 0.018, 1, 8);
       const radius = intensity === 'hero' ? 1.18 : 0.92;
       const height = intensity === 'hero' ? 6.8 : 5.8;
+
+      const platformMaterial = new THREE.MeshStandardMaterial({
+        color: primary.clone().multiplyScalar(0.34),
+        emissive: primary.clone().multiplyScalar(0.22),
+        metalness: 0.72,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.86,
+      });
+      const platformAccentMaterial = new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.72 });
+      const platform = new THREE.Group();
+      const baseY = -height / 2 - 0.32;
+      const baseDisc = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.65, radius * 1.82, 0.2, 64), platformMaterial);
+      baseDisc.position.y = baseY;
+      platform.add(baseDisc);
+      [1.52, 1.86, 2.2].forEach((ringRadius, ringIndex) => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(radius * ringRadius, 0.018 + ringIndex * 0.005, 8, 80), ringIndex === 1 ? platformAccentMaterial : platformMaterial);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = baseY + 0.13 - ringIndex * 0.035;
+        platform.add(ring);
+      });
+      group.add(platform);
+
+      const fragmentGeometry = new THREE.OctahedronGeometry(intensity === 'hero' ? 0.07 : 0.05, 0);
+      const fragmentMaterial = new THREE.MeshStandardMaterial({ color: accent, emissive: accent.clone().multiplyScalar(0.35), metalness: 0.4, roughness: 0.26 });
+      const fragments: THREE.Mesh[] = [];
+      const fragmentCount = intensity === 'hero' ? 18 : 10;
+      for (let index = 0; index < fragmentCount; index += 1) {
+        const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
+        fragment.userData.phase = (index / fragmentCount) * Math.PI * 2;
+        fragment.userData.radius = 2.15 + (index % 4) * 0.32;
+        fragment.userData.speed = 0.08 + (index % 3) * 0.018;
+        fragments.push(fragment);
+        fragmentGroup.add(fragment);
+      }
+
+      const sphereGeometry = new THREE.SphereGeometry(intensity === 'hero' ? 0.095 : 0.065, 18, 18);
+      const rungGeometry = new THREE.CylinderGeometry(0.018, 0.018, 1, 8);
       const turns = 3.15;
       const points = 54;
 
@@ -141,12 +180,17 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
         accent.set(readThemeColor('--accent', 'hsl(216 74% 55%)'));
         bridgeColor.copy(primary).lerp(accent, 0.46).multiplyScalar(0.78);
         strandMaterial.color.copy(primary);
-        strandMaterial.emissive.copy(primary).multiplyScalar(0.2);
+        strandMaterial.emissive.copy(primary).multiplyScalar(0.3);
         pairedStrandMaterial.color.copy(accent);
-        pairedStrandMaterial.emissive.copy(accent).multiplyScalar(0.18);
+        pairedStrandMaterial.emissive.copy(accent).multiplyScalar(0.28);
         rungMaterial.color.copy(bridgeColor);
         particleMaterial.color.copy(accent);
         rimLight.color.copy(primary);
+        platformMaterial.color.copy(primary).multiplyScalar(0.34);
+        platformMaterial.emissive.copy(primary).multiplyScalar(0.22);
+        platformAccentMaterial.color.copy(accent);
+        fragmentMaterial.color.copy(accent);
+        fragmentMaterial.emissive.copy(accent).multiplyScalar(0.35);
       };
 
       const resize = () => {
@@ -163,10 +207,11 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
       let frameId = 0;
       const tick = () => {
         const time = performance.now() * 0.001;
+        scrollProgress += (targetScrollProgress - scrollProgress) * 0.055;
         const auto = reduceMotion ? 0 : time * 0.18;
         const scrollAngle = scrollLinked ? scrollProgress * Math.PI * 2.2 : 0;
         const orbitAngle = auto + scrollAngle;
-        const orbitRadius = intensity === 'hero' ? 7.2 : 8.4;
+        const orbitRadius = intensity === 'hero' ? 9.35 : 8.4;
 
         camera.position.set(Math.sin(orbitAngle) * orbitRadius, Math.sin(orbitAngle * 0.45) * 0.65, Math.cos(orbitAngle) * orbitRadius);
         camera.lookAt(0, 0, 0);
@@ -175,6 +220,19 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
         group.rotation.z = Math.sin(time * 0.35) * 0.04;
         particles.rotation.y = reduceMotion ? 0 : -time * 0.045;
         particles.rotation.x = reduceMotion ? 0 : Math.sin(time * 0.2) * 0.08;
+        platform.rotation.y = reduceMotion ? 0 : time * 0.07;
+        fragments.forEach((fragment, index) => {
+          const phase = fragment.userData.phase as number;
+          const speed = fragment.userData.speed as number;
+          const fragmentRadius = fragment.userData.radius as number;
+          const angle = phase + time * speed + scrollProgress * Math.PI;
+          fragment.position.set(
+            Math.cos(angle) * fragmentRadius,
+            Math.sin(phase * 1.7 + time * 0.24) * (height * 0.47),
+            Math.sin(angle) * fragmentRadius,
+          );
+          fragment.rotation.set(time * 0.12 + index, time * 0.16 + phase, time * 0.08);
+        });
 
         renderer.render(scene, camera);
         frameId = window.requestAnimationFrame(tick);
@@ -196,10 +254,16 @@ export function DnaHelixScene({ scrollLinked = false, className, intensity = 'am
       sphereGeometry.dispose();
       rungGeometry.dispose();
       particleGeometry.dispose();
+      baseDisc.geometry.dispose();
+      platform.children.forEach(child => { if (child instanceof THREE.Mesh && child !== baseDisc) child.geometry.dispose(); });
+      fragmentGeometry.dispose();
       strandMaterial.dispose();
       pairedStrandMaterial.dispose();
       rungMaterial.dispose();
       particleMaterial.dispose();
+      platformMaterial.dispose();
+      platformAccentMaterial.dispose();
+      fragmentMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
